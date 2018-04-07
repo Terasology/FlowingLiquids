@@ -1,0 +1,7 @@
+{
+    "liquid": true,
+    "hardness": 3,
+    "attachmentAllowed": false,
+    "debrisOnDestroy": false,
+    "tile": "FlowingLiquids:DebugLiquid1"
+}
