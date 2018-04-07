@@ -32,13 +32,16 @@ import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
 import org.terasology.math.geom.Vector3i;
 import org.terasology.math.Side;
 import org.terasology.registry.In;
+import org.terasology.world.OnChangedBlock;
+import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockComponent;
 import org.terasology.world.block.BlockManager;
 import org.terasology.world.block.items.OnBlockItemPlaced;
 import org.terasology.world.block.items.BlockItemComponent;
-import org.terasology.world.OnChangedBlock;
-import org.terasology.world.WorldProvider;
+import org.terasology.world.chunks.ChunkConstants;
+import org.terasology.world.chunks.event.OnChunkGenerated;
+import org.terasology.world.chunks.event.OnChunkLoaded;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
@@ -83,6 +86,21 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         }
     }
     
+    @ReceiveEvent
+    public void onChunkLoaded(OnChunkLoaded event, EntityRef entity){
+        Vector3i chunkPos = new Vector3i(event.getChunkPos());
+        chunkPos.mul(ChunkConstants.SIZE_X, ChunkConstants.SIZE_Y, ChunkConstants.SIZE_Z);
+        for(int x = -1; x < ChunkConstants.SIZE_X + 1; x++) {
+            for(int y = -1; y < ChunkConstants.SIZE_Y + 1; y++) {
+                for(int z = -1; z < ChunkConstants.SIZE_Z + 1; z++) {
+                    Vector3i pos = new Vector3i(chunkPos);
+                    pos.add(x,y,z);
+                    addPos(pos);
+                }
+            }
+        }
+    }
+    
     private void updateNear(Vector3i pos) {
         addPos(pos);
         for(Side side : Side.values()) {
@@ -115,12 +133,12 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         }
         int numDone = 0;
         while(numDone < 10 && updatePositions.hasNext()){
-            numDone++;
             Vector3i pos = updatePositions.next();
             updatePositions.remove();
             if(worldProvider.isBlockRelevant(pos)) {
                 Block blockType = worldProvider.getBlock(pos);
                 if(blockType.isLiquid()){
+                    numDone++;
                     byte blockStatus = worldProvider.getRawLiquid(pos);
                     Vector3i below = Side.BOTTOM.getAdjacentPos(pos);
                     Block belowBlock = worldProvider.getBlock(below);
@@ -129,6 +147,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         worldProvider.setRawLiquid(below, blockStatus, (byte)0);
                         worldProvider.setBlock(pos, air);
                         worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
+                        continue;
                     } else if(belowBlock == blockType) {
                         byte belowBlockStatus = worldProvider.getRawLiquid(below);
                         int belowBlockHeight = getHeight(belowBlockStatus);
@@ -138,66 +157,65 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                                 worldProvider.setRawLiquid(below, setHeight(belowBlockStatus, belowBlockHeight + height), belowBlockStatus);
                                 worldProvider.setBlock(pos, air);
                                 worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
-                                continue;
                             } else {
                                 worldProvider.setRawLiquid(below, setHeight(belowBlockStatus, MAX_LIQUID_HEIGHT), belowBlockStatus);
                                 worldProvider.setRawLiquid(pos, setHeight(blockStatus, belowBlockHeight + height - MAX_LIQUID_HEIGHT), blockStatus);
                                 updateNear(pos);
                             }
+                            continue;
                         }
-                    } else {
-                        Vector3i lowestAdj = null;
-                        int lowestHeight = MAX_LIQUID_HEIGHT;
-                        int highestHeight = 0;
-                        for(Side side : Side.horizontalSides()) {
-                            Vector3i adj = side.getAdjacentPos(pos);
-                            Block adjBlock = worldProvider.getBlock(adj);
-                            int height;
-                            if(adjBlock == blockType) {
-                                height = getHeight(worldProvider.getRawLiquid(adj));
-                                if(height == MAX_LIQUID_HEIGHT) {
-                                    Vector3i above = Side.TOP.getAdjacentPos(adj);
-                                    if(worldProvider.getBlock(above) == blockType) {
-                                        height += getHeight(worldProvider.getRawLiquid(above));
-                                    }
+                    }
+                    Vector3i lowestAdj = null;
+                    int lowestHeight = MAX_LIQUID_HEIGHT;
+                    int highestHeight = 0;
+                    for(Side side : Side.horizontalSides()) {
+                        Vector3i adj = side.getAdjacentPos(pos);
+                        Block adjBlock = worldProvider.getBlock(adj);
+                        int height;
+                        if(adjBlock == blockType) {
+                            height = getHeight(worldProvider.getRawLiquid(adj));
+                            if(height == MAX_LIQUID_HEIGHT) {
+                                Vector3i above = Side.TOP.getAdjacentPos(adj);
+                                if(worldProvider.getBlock(above) == blockType) {
+                                    height += getHeight(worldProvider.getRawLiquid(above));
                                 }
-                            } else if(canSmoosh(blockType, adjBlock)) {
-                                height = 0;
-                                Vector3i belowAdj = Side.BOTTOM.getAdjacentPos(adj);
-                                Block belowAdjBlock = worldProvider.getBlock(belowAdj);
-                                if(belowAdjBlock == blockType) {
-                                    height = getHeight(worldProvider.getRawLiquid(belowAdj)) - MAX_LIQUID_HEIGHT;
-                                } else if(canSmoosh(blockType, belowAdjBlock)) {
-                                    height = -MAX_LIQUID_HEIGHT;
-                                }
-                            } else {
-                                continue; //Can't flow that way.
                             }
-                            if(height < lowestHeight) {
-                                lowestHeight = height;
-                                lowestAdj = adj;
+                        } else if(canSmoosh(blockType, adjBlock)) {
+                            height = 0;
+                            Vector3i belowAdj = Side.BOTTOM.getAdjacentPos(adj);
+                            Block belowAdjBlock = worldProvider.getBlock(belowAdj);
+                            if(belowAdjBlock == blockType) {
+                                height = getHeight(worldProvider.getRawLiquid(belowAdj)) - MAX_LIQUID_HEIGHT;
+                            } else if(canSmoosh(blockType, belowAdjBlock)) {
+                                height = -MAX_LIQUID_HEIGHT;
                             }
-                            if(height > highestHeight) {
-                                highestHeight = height;
-                            }
+                        } else {
+                            continue; //Can't flow that way.
                         }
-                        int height = getHeight(blockStatus);
-                        if(lowestHeight < height - 1 || lowestHeight < height && highestHeight > height) {
-                            byte adjStatus = worldProvider.getRawLiquid(lowestAdj);
-                            if(worldProvider.getBlock(lowestAdj) == blockType){
-                                worldProvider.setRawLiquid(lowestAdj, setHeight(adjStatus, lowestHeight+1), adjStatus);
-                                updateNear(lowestAdj);
-                            } else {
-                                worldProvider.setBlock(lowestAdj, blockType);
-                                worldProvider.setRawLiquid(lowestAdj, setHeight((byte)0, 1), adjStatus);
-                            }
-                            if(height > 1) {
-                                worldProvider.setRawLiquid(pos, setHeight(blockStatus, height-1), blockStatus);
-                                updateNear(pos);
-                            } else {
-                                worldProvider.setBlock(pos, air);
-                                worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
-                            }
+                        if(height < lowestHeight) {
+                            lowestHeight = height;
+                            lowestAdj = adj;
+                        }
+                        if(height > highestHeight) {
+                            highestHeight = height;
+                        }
+                    }
+                    int height = getHeight(blockStatus);
+                    if(lowestHeight < height - 1 || lowestHeight < height && highestHeight > height) {
+                        byte adjStatus = worldProvider.getRawLiquid(lowestAdj);
+                        if(worldProvider.getBlock(lowestAdj) == blockType){
+                            worldProvider.setRawLiquid(lowestAdj, setHeight(adjStatus, lowestHeight+1), adjStatus);
+                            updateNear(lowestAdj);
+                        } else {
+                            worldProvider.setBlock(lowestAdj, blockType);
+                            worldProvider.setRawLiquid(lowestAdj, setHeight((byte)0, 1), adjStatus);
+                        }
+                        if(height > 1) {
+                            worldProvider.setRawLiquid(pos, setHeight(blockStatus, height-1), blockStatus);
+                            updateNear(pos);
+                        } else {
+                            worldProvider.setBlock(pos, air);
+                            worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
                         }
                     }
                 }

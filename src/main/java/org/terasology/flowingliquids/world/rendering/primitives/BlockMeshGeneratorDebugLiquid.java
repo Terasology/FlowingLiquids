@@ -51,14 +51,20 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     
     private Block block;
     private Mesh mesh;
-    private WorldAtlas worldAtlas;
     
     private static Vector4f colourOffset = new Vector4f(1,1,1,1);
     private static final float texCoordScale = 1/(1-2/128); //Compensates for the default calculations in mapTexCoords.
+    private Vector2f[] textureOffsets;
     
     public BlockMeshGeneratorDebugLiquid(Block block, WorldAtlas worldAtlas) {
         this.block = block;
-        this.worldAtlas = worldAtlas;
+        textureOffsets = new Vector2f[9];
+        ResourceUrn baseTile = new ResourceUrn("FlowingLiquids:DebugLiquid1");
+        Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).scale(-1).add(new Vector2f(-texCoordScale/128/2, -texCoordScale/128));
+        for(int i=1; i<=8; i++){
+            ResourceUrn tile = new ResourceUrn("FlowingLiquids:DebugLiquid"+i);
+            textureOffsets[i] = worldAtlas.getTexCoords(tile, true).add(baseOffset);
+        }
     }
     
     @Override
@@ -69,16 +75,10 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
         for(Side side : Side.values()) {
             if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
-                BlockMeshPart labelledPart = basePart.mapTexCoords(getTexPos(fluidHeight), texCoordScale);
+                BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], texCoordScale);
                 labelledPart.appendTo(chunkMesh, x, y, z, colourOffset, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
             }
         }
-    }
-    
-    private Vector2f getTexPos(int height) {
-        ResourceUrn tile = new ResourceUrn("FlowingLiquids:DebugLiquid"+height);
-        ResourceUrn baseTile = new ResourceUrn("FlowingLiquids:DebugLiquid1");
-        return worldAtlas.getTexCoords(tile, true).add(worldAtlas.getTexCoords(baseTile, true).scale(-1)).add(new Vector2f(-texCoordScale/128/2, -texCoordScale/128));
     }
     
     private boolean isSideVisibleForBlockTypes(Block blockToCheck, Block currentBlock, Side side) {
