@@ -3,7 +3,7 @@
     "version" : "0.1.0-SNAPSHOT",
     "author" : "4Denthusiast",
     "displayName" : "FlowingLiquids",
-    "description" : "Lets water flow, conserving its volume.",
+    "description" : "Lets water flow, conserving its volume. Relies on engine PR #3309.",
     "dependencies" : [],
     "serverSideOnly" : false
 }
