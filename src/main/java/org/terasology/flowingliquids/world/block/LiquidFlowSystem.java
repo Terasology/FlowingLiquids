@@ -40,7 +40,6 @@ import org.terasology.world.block.BlockManager;
 import org.terasology.world.block.items.OnBlockItemPlaced;
 import org.terasology.world.block.items.BlockItemComponent;
 import org.terasology.world.chunks.ChunkConstants;
-import org.terasology.world.chunks.event.OnChunkGenerated;
 import org.terasology.world.chunks.event.OnChunkLoaded;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
@@ -228,14 +227,13 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         return replacing == air;
     }
     
-    // Use (8 - the value) so as to bias it upwards and make (byte) 0 the default setting (i.e. full)
     private static int getHeight(byte status){
-        return 8 - (int) (status & 7);
+        return (int) (status & 7)+1;
     }
     
     private static byte setHeight(byte status, int height){
         if(height < 1 || height > 8)
             throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to 8.");
-        return (byte) ((status & ~7) | (8 - height));
+        return (byte) ((status & ~7) | (height-1));
     }
 }

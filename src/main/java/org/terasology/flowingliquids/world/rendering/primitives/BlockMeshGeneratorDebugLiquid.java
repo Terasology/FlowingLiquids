@@ -70,7 +70,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     @Override
     public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
         Vector3i pos = new Vector3i(x,y,z);
-        int fluidHeight = 8 - (7 & view.getRawLiquid(pos));
+        int fluidHeight = (7 & view.getRawLiquid(pos)) + 1;
         BlockAppearance appearance = block.getAppearance(null); //I know it's DebugLiquid, which doesn't vary its appearance.
         for(Side side : Side.values()) {
             if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {
