@@ -64,8 +64,6 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     
     @Override
     public void initialise() {
-        //evenUpdatePositions = ConcurrentHashMap.newKeySet();
-        // oddUpdatePositions = ConcurrentHashMap.newKeySet();
         evenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
          oddUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
         newEvenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
@@ -120,16 +118,15 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     @Override
     public void update(float delta) {
         evenTick = !evenTick;
-        Iterator<Vector3i> updatePositions;
-        if(evenTick) {
-            evenUpdatePositions.addAll(newEvenUpdatePositions);
-            newEvenUpdatePositions.clear();
-            updatePositions = evenUpdatePositions.iterator();
-        } else {
-            oddUpdatePositions.addAll(newOddUpdatePositions);
-            newOddUpdatePositions.clear();
-            updatePositions = oddUpdatePositions.iterator();
+        if(evenUpdatePositions.isEmpty() && oddUpdatePositions.isEmpty()) {
+            Set <Vector3i> temp = evenUpdatePositions;
+            evenUpdatePositions = newEvenUpdatePositions;
+            newEvenUpdatePositions = temp;
+            temp = oddUpdatePositions;
+            oddUpdatePositions = newOddUpdatePositions;
+            newOddUpdatePositions = temp;
         }
+        Iterator<Vector3i> updatePositions = (evenTick ? evenUpdatePositions : oddUpdatePositions).iterator();
         int numDone = 0;
         while(numDone < 10 && updatePositions.hasNext()){
             Vector3i pos = updatePositions.next();
