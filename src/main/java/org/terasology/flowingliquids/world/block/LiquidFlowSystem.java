@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package org.terasology.flowingliquids.world.block;
+
 import java.util.Iterator;
 import java.util.Set;
 import java.util.LinkedHashSet;
@@ -42,6 +44,9 @@ import org.terasology.world.block.items.BlockItemComponent;
 import org.terasology.world.chunks.ChunkConstants;
 import org.terasology.world.chunks.event.OnChunkLoaded;
 
+import static org.terasology.flowingliquids.world.block.LiquidData.getHeight;
+import static org.terasology.flowingliquids.world.block.LiquidData.setHeight;
+
 @RegisterSystem(RegisterMode.AUTHORITY)
 public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
 
@@ -59,8 +64,6 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private Set<Vector3i> newEvenUpdatePositions;
     private Set<Vector3i> newOddUpdatePositions;
     private boolean evenTick;
-    
-    private static int MAX_LIQUID_HEIGHT = 8;
     
     @Override
     public void initialise() {
@@ -147,22 +150,22 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                     } else if(belowBlock == blockType) {
                         byte belowBlockStatus = worldProvider.getRawLiquid(below);
                         int belowBlockHeight = getHeight(belowBlockStatus);
-                        if(belowBlockHeight < MAX_LIQUID_HEIGHT){
+                        if(belowBlockHeight < LiquidData.MAX_HEIGHT){
                             int height = getHeight(blockStatus);
-                            if(height + belowBlockHeight <= MAX_LIQUID_HEIGHT) {
+                            if(height + belowBlockHeight <= LiquidData.MAX_HEIGHT) {
                                 worldProvider.setRawLiquid(below, setHeight(belowBlockStatus, belowBlockHeight + height), belowBlockStatus);
                                 worldProvider.setBlock(pos, air);
                                 worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
                             } else {
-                                worldProvider.setRawLiquid(below, setHeight(belowBlockStatus, MAX_LIQUID_HEIGHT), belowBlockStatus);
-                                worldProvider.setRawLiquid(pos, setHeight(blockStatus, belowBlockHeight + height - MAX_LIQUID_HEIGHT), blockStatus);
+                                worldProvider.setRawLiquid(below, setHeight(belowBlockStatus, LiquidData.MAX_HEIGHT), belowBlockStatus);
+                                worldProvider.setRawLiquid(pos, setHeight(blockStatus, belowBlockHeight + height - LiquidData.MAX_HEIGHT), blockStatus);
                                 updateNear(pos);
                             }
                             continue;
                         }
                     }
                     Vector3i lowestAdj = null;
-                    int lowestHeight = MAX_LIQUID_HEIGHT;
+                    int lowestHeight = LiquidData.MAX_HEIGHT;
                     int highestHeight = 0;
                     for(Side side : Side.horizontalSides()) {
                         Vector3i adj = side.getAdjacentPos(pos);
@@ -170,7 +173,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         int height;
                         if(adjBlock == blockType) {
                             height = getHeight(worldProvider.getRawLiquid(adj));
-                            if(height == MAX_LIQUID_HEIGHT) {
+                            if(height == LiquidData.MAX_HEIGHT) {
                                 Vector3i above = Side.TOP.getAdjacentPos(adj);
                                 if(worldProvider.getBlock(above) == blockType) {
                                     height += getHeight(worldProvider.getRawLiquid(above));
@@ -181,9 +184,9 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             Vector3i belowAdj = Side.BOTTOM.getAdjacentPos(adj);
                             Block belowAdjBlock = worldProvider.getBlock(belowAdj);
                             if(belowAdjBlock == blockType) {
-                                height = getHeight(worldProvider.getRawLiquid(belowAdj)) - MAX_LIQUID_HEIGHT;
+                                height = getHeight(worldProvider.getRawLiquid(belowAdj)) - LiquidData.MAX_HEIGHT;
                             } else if(canSmoosh(blockType, belowAdjBlock)) {
-                                height = -MAX_LIQUID_HEIGHT;
+                                height = -LiquidData.MAX_HEIGHT;
                             }
                         } else {
                             continue; //Can't flow that way.
@@ -204,7 +207,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             updateNear(lowestAdj);
                         } else {
                             worldProvider.setBlock(lowestAdj, blockType);
-                            worldProvider.setRawLiquid(lowestAdj, setHeight((byte)0, 1), adjStatus);
+                            worldProvider.setRawLiquid(lowestAdj, setHeight(LiquidData.FULL, 1), adjStatus);
                         }
                         if(height > 1) {
                             worldProvider.setRawLiquid(pos, setHeight(blockStatus, height-1), blockStatus);
@@ -213,6 +216,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             worldProvider.setBlock(pos, air);
                             worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
                         }
+                    } else {
+                        numDone -= 1;
                     }
                 }
             }
@@ -222,15 +227,5 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     // Is the liquid able to destroy this other block by flowing into it?
     private boolean canSmoosh(Block liquid, Block replacing){
         return replacing == air;
-    }
-    
-    private static int getHeight(byte status){
-        return (int) (status & 7)+1;
-    }
-    
-    private static byte setHeight(byte status, int height){
-        if(height < 1 || height > 8)
-            throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to 8.");
-        return (byte) ((status & ~7) | (height-1));
     }
 }

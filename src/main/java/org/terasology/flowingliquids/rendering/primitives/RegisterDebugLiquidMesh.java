@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package org.terasology.flowingliquids.rendering.primitives;
+
 import org.terasology.registry.In;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterSystem;

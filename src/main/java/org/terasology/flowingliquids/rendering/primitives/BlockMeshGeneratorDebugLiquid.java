@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package org.terasology.flowingliquids.rendering.primitives;
  
 import com.google.common.collect.Maps;
 
@@ -41,6 +43,8 @@ import org.terasology.world.block.shapes.BlockMeshPart;
 import org.terasology.world.block.tiles.BlockTile;
 import org.terasology.world.block.tiles.WorldAtlas;
 
+import org.terasology.flowingliquids.world.block.LiquidData;
+
 /**
  * As the default block mesh generator does not allow the mesh to depend on
  * the liquid value, this modified version must be used for FlowingLiquids:DebugLiquid.
@@ -61,7 +65,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
         textureOffsets = new Vector2f[9];
         ResourceUrn baseTile = new ResourceUrn("FlowingLiquids:DebugLiquid1");
         Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).scale(-1).add(new Vector2f(-texCoordScale/128/2, -texCoordScale/128));
-        for(int i=1; i<=8; i++){
+        for(int i=1; i<=LiquidData.MAX_HEIGHT; i++){
             ResourceUrn tile = new ResourceUrn("FlowingLiquids:DebugLiquid"+i);
             textureOffsets[i] = worldAtlas.getTexCoords(tile, true).add(baseOffset);
         }
@@ -70,7 +74,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     @Override
     public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
         Vector3i pos = new Vector3i(x,y,z);
-        int fluidHeight = (7 & view.getRawLiquid(pos)) + 1;
+        int fluidHeight = LiquidData.getHeight(view.getRawLiquid(pos));
         BlockAppearance appearance = block.getAppearance(null); //I know it's DebugLiquid, which doesn't vary its appearance.
         for(Side side : Side.values()) {
             if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {
