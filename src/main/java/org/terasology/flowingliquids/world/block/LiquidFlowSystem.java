@@ -82,6 +82,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     @ReceiveEvent
     public void liquidPlaced(OnBlockItemPlaced event, EntityRef blockEntity, BlockItemComponent blockComponent) {
         if(blockComponent.blockFamily.getArchetypeBlock().isLiquid()){
+            worldProvider.setRawLiquid(event.getPosition(), LiquidData.FULL, (byte) 0);
             addPos(event.getPosition());
         }
     }
