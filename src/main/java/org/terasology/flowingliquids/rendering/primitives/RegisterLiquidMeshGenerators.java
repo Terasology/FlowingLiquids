@@ -25,7 +25,7 @@ import org.terasology.world.block.BlockManager;
 import org.terasology.world.block.tiles.WorldAtlas;
 
 @RegisterSystem(RegisterMode.CLIENT)
-public class RegisterDebugLiquidMesh extends BaseComponentSystem {
+public class RegisterLiquidMeshGenerators extends BaseComponentSystem {
     
     @In
     private BlockManager blockManager;
@@ -36,6 +36,11 @@ public class RegisterDebugLiquidMesh extends BaseComponentSystem {
     public void initialise(){
         Block debugLiquid = blockManager.getBlock("FlowingLiquids:DebugLiquid");
         debugLiquid.setMeshGenerator(new BlockMeshGeneratorDebugLiquid(debugLiquid, worldAtlas));
+        for(Block block : blockManager.listRegisteredBlocks()) {
+            if(block.isLiquid() && block != debugLiquid) {
+                block.setMeshGenerator(new BlockMeshGeneratorLiquid(block, worldAtlas));
+            }
+        }
     }
     public void preBegin(){}
     public void postBegin(){}
