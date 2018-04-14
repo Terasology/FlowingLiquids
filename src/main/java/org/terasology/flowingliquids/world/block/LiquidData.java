@@ -16,20 +16,72 @@
 
 package org.terasology.flowingliquids.world.block;
 
+import org.terasology.math.Side;
+
 /**
  * Utility class for encoding and decoding liquid data.
  */
 public class LiquidData {
     public static final int MAX_HEIGHT = 8;
-    public static final byte FULL = (byte) 7;
+    public static final int MAX_RATE = 1;
+    public static final int MAX_DOWN_RATE = 2;
+    public static final byte FULL = (byte) 0b00_110_111;
     
     public static int getHeight(byte status){
-        return (int) (status & 7)+1;
+        return (int) (status & 0b00_000_111)+1;
     }
     
     public static byte setHeight(byte status, int height){
-        if(height < 1 || height > 8)
+        if(height < 1 || height > MAX_HEIGHT)
             throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to 8.");
-        return (byte) ((status & ~7) | (height-1));
+        return (byte) ((status & ~0b00_000_111) | (height-1));
+    }
+    
+    public static Side getDirection(byte status) {
+        int sideData = sideData(status);
+        if(sideData < 6) {
+            return Side.values()[sideData];
+        } else if(sideData == 6) {
+            return null;
+        } else { // sideData == 7
+            return Side.BOTTOM;
+        }
+    }
+    
+    public static byte setDirection(byte status, Side side) {
+        int sideData = side == null ? 6 : side.ordinal();
+        return (byte) ((status & ~0b00_111_000) | (sideData << 3));
+    }
+    
+    public static int getRate(byte status) {
+        int sideData = sideData(status);
+        if(sideData < 6) {
+            return 1;
+        } else if(sideData == 6) {
+            return 0;
+        } else { // sideData == 7
+            return 2;
+        }
+    }
+    
+    public static byte setRate(byte status, int rate) {
+        int sideData = sideData(status);
+        if(rate == 0) {
+            return setDirection(status, null);
+        } else if(rate == 1 && sideData < 6) {
+            return status;
+        } else if(rate == 1 && sideData == 7) {
+            return setDirection(status, Side.BOTTOM);
+        } else if(rate == 2 && sideData == Side.BOTTOM.ordinal()) {
+            return (byte) ((status & ~0b00_111_000) | (7 << 3));
+        } else if(sideData == 6) {
+            throw new IllegalArgumentException("Can't set rate frorm 0 as there is no current direction.");
+        } else {
+            throw new IllegalArgumentException("Liquid rates are constrained to the range 0 to 1 (or 2 for downwards).");
+        }
+    }
+    
+    private static int sideData(byte status) {
+        return (status & 0b00_111_000) >> 3;
     }
 }

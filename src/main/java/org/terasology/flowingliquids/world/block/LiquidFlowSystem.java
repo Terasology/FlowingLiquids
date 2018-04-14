@@ -64,6 +64,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private Set<Vector3i> newEvenUpdatePositions;
     private Set<Vector3i> newOddUpdatePositions;
     private boolean evenTick;
+    private float timeSinceUpdate;
+    private static final float UPDATE_INTERVAL = 0.5f;
     
     @Override
     public void initialise() {
@@ -121,12 +123,18 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     
     @Override
     public void update(float delta) {
-        evenTick = !evenTick;
-        if(evenUpdatePositions.isEmpty() && oddUpdatePositions.isEmpty()) {
+        timeSinceUpdate += delta;
+        if(evenTick && evenUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
+            evenTick = false;
+            timeSinceUpdate = 0;
             Set <Vector3i> temp = evenUpdatePositions;
             evenUpdatePositions = newEvenUpdatePositions;
             newEvenUpdatePositions = temp;
-            temp = oddUpdatePositions;
+        }
+        if(!evenTick && oddUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
+            evenTick = true;
+            timeSinceUpdate = 0;
+            Set <Vector3i> temp = oddUpdatePositions;
             oddUpdatePositions = newOddUpdatePositions;
             newOddUpdatePositions = temp;
         }
