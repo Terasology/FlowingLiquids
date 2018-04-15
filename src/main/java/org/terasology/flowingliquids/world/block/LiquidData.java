@@ -22,12 +22,23 @@ package org.terasology.flowingliquids.world.block;
 public class LiquidData {
     public static final int MAX_HEIGHT = 8;
     public static final byte FULL = (byte) 7;
-    
+
+    /**
+     * Converts a byte height to an integer. The result has a max value of 7
+     * @param status The byte to convert
+     * @return The height as an int.
+     */
     public static int getHeight(byte status){
         return (int) (status & 7)+1;
     }
-    
-    public static byte setHeight(byte status, int height){
+
+    /**
+     * Converts an integer height to a byte height
+     * @param status The byte height to store with
+     * @param height The height to store
+     * @return The height as a byte
+     */
+    public static byte setHeight(byte status, int height) {
         if(height < 1 || height > 8)
             throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to 8.");
         return (byte) ((status & ~7) | (height-1));
