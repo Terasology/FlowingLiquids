@@ -120,30 +120,24 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         }
     }
 
-    /**
-     * Collect a list of positions to update
-     *
-     * @param pos The initial position to check
-     */
-    private void updateNear(Vector3i pos) {
-        addPos(pos);
-        for (Side side : Side.values()) {
-            addPos(side.getAdjacentPos(pos));
+    @Override
+    public void update(float delta) {
+        evenTick = !evenTick;
+        if (evenUpdatePositions.isEmpty() && oddUpdatePositions.isEmpty()) {
+            Set<Vector3i> temp = evenUpdatePositions;
+            evenUpdatePositions = newEvenUpdatePositions;
+            newEvenUpdatePositions = temp;
+            temp = oddUpdatePositions;
+            oddUpdatePositions = newOddUpdatePositions;
+            newOddUpdatePositions = temp;
         }
-    }
-
-    /**
-     * Add a position to be checked
-     *
-     * @param pos The position to add
-     */
-    private void addPos(Vector3i pos) {
-        if (worldProvider.isBlockRelevant(pos) && worldProvider.getBlock(pos).isLiquid()) {
-            if ((pos.x() + pos.y() + pos.z()) % 2 == 0) {
-                newEvenUpdatePositions.add(pos);
-            } else {
-                newOddUpdatePositions.add(pos);
-            }
+        Iterator<Vector3i> updatePositions = (evenTick ? evenUpdatePositions : oddUpdatePositions).iterator();
+        int numDone = 0;
+        while (numDone < 10 && updatePositions.hasNext()) {
+            Vector3i pos = updatePositions.next();
+            updatePositions.remove();
+            boolean result = processPosition(pos);
+            numDone += result ? 1 : 0;
         }
     }
 
@@ -193,13 +187,14 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
 
     /**
      * Flows the liquid into the lowest side
-     * @param pos The position of the liquid
-     * @param liquidType The type  of the liquid
-     * @param liquidLevel The level of the liquid
-     * @param lowestPos The position of the lowest side
-     * @param lowestHeight The height of the lowest side
+     *
+     * @param pos           The position of the liquid
+     * @param liquidType    The type  of the liquid
+     * @param liquidLevel   The level of the liquid
+     * @param lowestPos     The position of the lowest side
+     * @param lowestHeight  The height of the lowest side
      * @param highestHeight The height of the highest side
-     * @return
+     * @return True if the liquid was able to flow in. False otherwise
      */
     private boolean flowIntoLowest(Vector3i pos, Block liquidType, byte liquidLevel, Vector3i lowestPos, int lowestHeight, int highestHeight) {
         int liquidHeight = getHeight(liquidLevel);
@@ -227,9 +222,10 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
 
     /**
      * Get the height of the liquid at the side
-     * @param adjBlock The block being checked
+     *
+     * @param adjBlock   The block being checked
      * @param liquidType The liquid type
-     * @param adj The position being tested
+     * @param adj        The position being tested
      * @return The height of the liquid, or null if it cannot flow there.
      */
     private Integer processSide(Block adjBlock, Block liquidType, Vector3i adj) {
@@ -260,6 +256,14 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         return height;
     }
 
+    /**
+     * Attempt to flow the liquid towards the sides.
+     *
+     * @param pos         The position of the liquid
+     * @param liquidType  The liquid type
+     * @param blockStatus The liquid status
+     * @return True if the liquid was able to flow somewhere
+     */
     private boolean flowLiquidIntoSides(Vector3i pos, Block liquidType, byte blockStatus) {
         Vector3i lowestAdj = null;
         int lowestHeight = LiquidData.MAX_HEIGHT;
@@ -285,6 +289,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
 
     /**
      * Attempts to process the flow for the liquid at the position
+     *
      * @param pos The position of the liquid
      * @return True if the liquid was processed. False otherwise.
      */
@@ -311,29 +316,43 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         return false;
     }
 
-    @Override
-    public void update(float delta) {
-        evenTick = !evenTick;
-        if (evenUpdatePositions.isEmpty() && oddUpdatePositions.isEmpty()) {
-            Set<Vector3i> temp = evenUpdatePositions;
-            evenUpdatePositions = newEvenUpdatePositions;
-            newEvenUpdatePositions = temp;
-            temp = oddUpdatePositions;
-            oddUpdatePositions = newOddUpdatePositions;
-            newOddUpdatePositions = temp;
-        }
-        Iterator<Vector3i> updatePositions = (evenTick ? evenUpdatePositions : oddUpdatePositions).iterator();
-        int numDone = 0;
-        while (numDone < 10 && updatePositions.hasNext()) {
-            Vector3i pos = updatePositions.next();
-            updatePositions.remove();
-            boolean result = processPosition(pos);
-            numDone += result ? 1 : 0;
+    /**
+     * Can the liquid flow replace the block
+     *
+     * @param liquid    The liquid flowing
+     * @param replacing The block the liquid is replacing
+     * @return True if it can, false otherwise
+     */
+    private boolean canSmoosh(Block liquid, Block replacing) {
+        return replacing == air;
+    }
+
+
+    /**
+     * Collect a list of positions to update
+     *
+     * @param pos The initial position to check
+     */
+    private void updateNear(Vector3i pos) {
+        addPos(pos);
+        for (Side side : Side.values()) {
+            addPos(side.getAdjacentPos(pos));
         }
     }
 
-    // Is the liquid able to destroy this other block by flowing into it?
-    private boolean canSmoosh(Block liquid, Block replacing) {
-        return replacing == air;
+
+    /**
+     * Add a position to be checked
+     *
+     * @param pos The position to add
+     */
+    private void addPos(Vector3i pos) {
+        if (worldProvider.isBlockRelevant(pos) && worldProvider.getBlock(pos).isLiquid()) {
+            if ((pos.x() + pos.y() + pos.z()) % 2 == 0) {
+                newEvenUpdatePositions.add(pos);
+            } else {
+                newOddUpdatePositions.add(pos);
+            }
+        }
     }
 }
