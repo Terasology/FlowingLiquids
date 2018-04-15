@@ -112,7 +112,13 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     }
     
     private void addPos(Vector3i pos){
-        if(worldProvider.isBlockRelevant(pos) && worldProvider.getBlock(pos).isLiquid()) {
+        if(worldProvider.getBlock(pos).isLiquid()) {
+            doAddPos(pos);
+        }
+    }
+    
+    private void doAddPos(Vector3i pos){
+        if(worldProvider.isBlockRelevant(pos)) {
             if((pos.x() + pos.y() + pos.z()) % 2 == 0) {
                 newEvenUpdatePositions.add(pos);
             } else {
@@ -125,109 +131,170 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     public void update(float delta) {
         timeSinceUpdate += delta;
         if(evenTick && evenUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
+            //logger.info("Odd  "+newOddUpdatePositions.size());
             evenTick = false;
-            timeSinceUpdate = 0;
-            Set <Vector3i> temp = evenUpdatePositions;
-            evenUpdatePositions = newEvenUpdatePositions;
-            newEvenUpdatePositions = temp;
-        }
-        if(!evenTick && oddUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
-            evenTick = true;
             timeSinceUpdate = 0;
             Set <Vector3i> temp = oddUpdatePositions;
             oddUpdatePositions = newOddUpdatePositions;
             newOddUpdatePositions = temp;
         }
+        if(!evenTick && oddUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
+            //logger.info("Even "+newEvenUpdatePositions.size());
+            evenTick = true;
+            timeSinceUpdate = 0;
+            Set <Vector3i> temp = evenUpdatePositions;
+            evenUpdatePositions = newEvenUpdatePositions;
+            newEvenUpdatePositions = temp;
+        }
         Iterator<Vector3i> updatePositions = (evenTick ? evenUpdatePositions : oddUpdatePositions).iterator();
         int numDone = 0;
+        boolean debug = false; //evenUpdatePositions.size() + oddUpdatePositions.size() < 20;
         while(numDone < 10 && updatePositions.hasNext()){
             Vector3i pos = updatePositions.next();
             updatePositions.remove();
             if(worldProvider.isBlockRelevant(pos)) {
+                numDone++;
                 Block blockType = worldProvider.getBlock(pos);
-                if(blockType.isLiquid()){
-                    numDone++;
-                    byte blockStatus = worldProvider.getRawLiquid(pos);
-                    Vector3i below = Side.BOTTOM.getAdjacentPos(pos);
-                    Block belowBlock = worldProvider.getBlock(below);
-                    if(canSmoosh(blockType, belowBlock)) {
-                        worldProvider.setBlock(below, blockType);
-                        worldProvider.setRawLiquid(below, blockStatus, (byte)0);
+                byte blockStatus = worldProvider.getRawLiquid(pos);
+                int startHeight = 0;
+                Side startDirection = null;
+                int startRate = 0;
+                
+                if(blockType.isLiquid()) {
+                    startHeight = getHeight(blockStatus);
+                    startDirection = LiquidData.getDirection(blockStatus);
+                    startRate = LiquidData.getRate(blockStatus);
+                }
+                if(debug) logger.info("Pondering "+pos+", "+blockType.getDisplayName()+" with h"+startHeight+"r"+startRate+"d"+startDirection);
+                
+                int height = startHeight;
+                height -= startRate;
+                if(height < 0) {
+                    throw new IllegalStateException("Liquid outflow greater than existing volume.");
+                }
+                
+                //TODO: consider this in a varied order, but with top always first.
+                boolean smooshed = false;
+                for(Side side : Side.values()) {
+                    Vector3i adjPos = side.getAdjacentPos(pos);
+                    Block adjBlock = worldProvider.getBlock(adjPos);
+                    byte adjStatus = worldProvider.getRawLiquid(adjPos);
+                    if(adjBlock.isLiquid() && side.reverse() == LiquidData.getDirection(adjStatus)) {
+                        if(adjBlock == blockType) {
+                            int rate = LiquidData.getRate(adjStatus);
+                            if(rate + height > LiquidData.MAX_HEIGHT) {
+                                worldProvider.setRawLiquid(adjPos, LiquidData.setRate(adjStatus, LiquidData.MAX_HEIGHT - height), adjStatus);
+                                height = LiquidData.MAX_HEIGHT;
+                                addPos(adjPos);
+                            } else {
+                                height += rate;
+                            }
+                        } else if(canSmoosh(adjBlock, blockType)) {
+                            blockType = adjBlock;
+                            worldProvider.setBlock(pos, adjBlock);
+                            height = LiquidData.getRate(adjStatus);
+                            smooshed = true;
+                        } else {
+                            worldProvider.setRawLiquid(adjPos, LiquidData.setRate(adjStatus, 0), adjStatus);
+                            addPos(adjPos);
+                        }
+                    }
+                }
+                
+                if(height == 0) {
+                    if(blockType.isLiquid()) {
                         worldProvider.setBlock(pos, air);
                         worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
-                        continue;
-                    } else if(belowBlock == blockType) {
-                        byte belowBlockStatus = worldProvider.getRawLiquid(below);
-                        int belowBlockHeight = getHeight(belowBlockStatus);
-                        if(belowBlockHeight < LiquidData.MAX_HEIGHT){
-                            int height = getHeight(blockStatus);
-                            if(height + belowBlockHeight <= LiquidData.MAX_HEIGHT) {
-                                worldProvider.setRawLiquid(below, setHeight(belowBlockStatus, belowBlockHeight + height), belowBlockStatus);
-                                worldProvider.setBlock(pos, air);
-                                worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
-                            } else {
-                                worldProvider.setRawLiquid(below, setHeight(belowBlockStatus, LiquidData.MAX_HEIGHT), belowBlockStatus);
-                                worldProvider.setRawLiquid(pos, setHeight(blockStatus, belowBlockHeight + height - LiquidData.MAX_HEIGHT), blockStatus);
-                                updateNear(pos);
-                            }
-                            continue;
-                        }
-                    }
-                    Vector3i lowestAdj = null;
-                    int lowestHeight = LiquidData.MAX_HEIGHT;
-                    int highestHeight = 0;
-                    for(Side side : Side.horizontalSides()) {
-                        Vector3i adj = side.getAdjacentPos(pos);
-                        Block adjBlock = worldProvider.getBlock(adj);
-                        int height;
-                        if(adjBlock == blockType) {
-                            height = getHeight(worldProvider.getRawLiquid(adj));
-                            if(height == LiquidData.MAX_HEIGHT) {
-                                Vector3i above = Side.TOP.getAdjacentPos(adj);
-                                if(worldProvider.getBlock(above) == blockType) {
-                                    height += getHeight(worldProvider.getRawLiquid(above));
-                                }
-                            }
-                        } else if(canSmoosh(blockType, adjBlock)) {
-                            height = 0;
-                            Vector3i belowAdj = Side.BOTTOM.getAdjacentPos(adj);
-                            Block belowAdjBlock = worldProvider.getBlock(belowAdj);
-                            if(belowAdjBlock == blockType) {
-                                height = getHeight(worldProvider.getRawLiquid(belowAdj)) - LiquidData.MAX_HEIGHT;
-                            } else if(canSmoosh(blockType, belowAdjBlock)) {
-                                height = -LiquidData.MAX_HEIGHT;
-                            }
-                        } else {
-                            continue; //Can't flow that way.
-                        }
-                        if(height < lowestHeight) {
-                            lowestHeight = height;
-                            lowestAdj = adj;
-                        }
-                        if(height > highestHeight) {
-                            highestHeight = height;
-                        }
-                    }
-                    int height = getHeight(blockStatus);
-                    if(lowestHeight < height - 1 || lowestHeight < height && highestHeight > height) {
-                        byte adjStatus = worldProvider.getRawLiquid(lowestAdj);
-                        if(worldProvider.getBlock(lowestAdj) == blockType){
-                            worldProvider.setRawLiquid(lowestAdj, setHeight(adjStatus, lowestHeight+1), adjStatus);
-                            updateNear(lowestAdj);
-                        } else {
-                            worldProvider.setBlock(lowestAdj, blockType);
-                            worldProvider.setRawLiquid(lowestAdj, setHeight(LiquidData.FULL, 1), adjStatus);
-                        }
-                        if(height > 1) {
-                            worldProvider.setRawLiquid(pos, setHeight(blockStatus, height-1), blockStatus);
-                            updateNear(pos);
-                        } else {
-                            worldProvider.setBlock(pos, air);
-                            worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
-                        }
                     } else {
-                        numDone -= 1;
+                        numDone--;
                     }
+                    if(startDirection != null) {
+                        addPos(startDirection.getAdjacentPos(pos));
+                    }
+                    continue;
+                }
+                
+                Side direction = null;
+                int rate = 0;
+                int maxRate = LiquidData.MAX_DOWN_RATE;
+                
+                Vector3i below = Side.BOTTOM.getAdjacentPos(pos);
+                Block belowBlock = worldProvider.getBlock(below);
+                if(canSmoosh(blockType, belowBlock)) {
+                    direction = Side.BOTTOM;
+                    rate = LiquidData.MAX_DOWN_RATE;
+                } else if(blockType == belowBlock) {
+                    direction = Side.BOTTOM;
+                    byte belowStatus = worldProvider.getRawLiquid(below);
+                    rate = LiquidData.MAX_HEIGHT - getHeight(belowStatus);
+                    maxRate = rate + LiquidData.getRate(belowStatus);
+                    if(rate > LiquidData.MAX_DOWN_RATE) {
+                        rate = LiquidData.MAX_DOWN_RATE;
+                    }
+                }
+                if(rate == 0) {
+                    int lowestHeight = LiquidData.MAX_HEIGHT + 1;
+                    int lowestRate = 0;
+                    Side lowestSide = null;
+                    for(Side side : Side.horizontalSides()) {
+                        Vector3i adjPos = side.getAdjacentPos(pos);
+                        Block adjBlock = worldProvider.getBlock(adjPos);
+                        int adjHeight;
+                        int adjRate = 0;
+                        if(adjBlock == blockType) {
+                            byte adjStatus = worldProvider.getRawLiquid(adjPos);
+                            adjHeight = getHeight(adjStatus);
+                            adjRate = LiquidData.getRate(adjStatus);
+                        } else if(canSmoosh(blockType, adjBlock)) {
+                            adjHeight = 0;
+                        } else {
+                            adjHeight = LiquidData.MAX_HEIGHT + 1;
+                        }
+                        if(adjHeight < lowestHeight || (side == startDirection && !smooshed && adjHeight <= lowestHeight)) {
+                            lowestHeight = adjHeight;
+                            lowestSide = side;
+                            lowestRate = adjRate;
+                        }
+                    }
+                    rate = (height - lowestHeight)/2;
+                    maxRate = height-lowestHeight+lowestRate;
+                    if(rate > LiquidData.MAX_RATE) {
+                        rate = LiquidData.MAX_RATE;
+                    }
+                    direction = lowestSide;
+                }
+                if(direction == startDirection && !smooshed && rate < startRate) {
+                    rate = startRate;
+                }
+                if(rate > maxRate) {
+                    rate = maxRate;
+                }
+                if(rate > height) {
+                    rate = height;
+                } else if(rate < 0) {
+                    rate = 0;
+                }
+                
+                byte newStatus = LiquidData.setRate(
+                    LiquidData.setDirection(
+                        LiquidData.setHeight(
+                            blockStatus,
+                            height),
+                        direction),
+                    rate);
+                if(newStatus != blockStatus || smooshed) {
+                    worldProvider.setRawLiquid(pos, newStatus, blockStatus);
+                    updateNear(pos);
+                    if(direction != startDirection || rate != startRate) {
+                        if(direction != null) {
+                            doAddPos(direction.getAdjacentPos(pos));
+                        }
+                        if(startDirection != null) {
+                            addPos(startDirection.getAdjacentPos(pos));
+                        }
+                    }
+                } else {
+                    numDone--;
                 }
             }
         }

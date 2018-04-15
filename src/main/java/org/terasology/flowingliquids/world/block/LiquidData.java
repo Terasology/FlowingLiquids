@@ -75,9 +75,9 @@ public class LiquidData {
         } else if(rate == 2 && sideData == Side.BOTTOM.ordinal()) {
             return (byte) ((status & ~0b00_111_000) | (7 << 3));
         } else if(sideData == 6) {
-            throw new IllegalArgumentException("Can't set rate frorm 0 as there is no current direction.");
+            throw new IllegalArgumentException("Can't set rate > 0 as there is no current direction.");
         } else {
-            throw new IllegalArgumentException("Liquid rates are constrained to the range 0 to 1 (or 2 for downwards).");
+            throw new IllegalArgumentException("Liquid rates are constrained to the range 0 to 1 (or 2 for downwards). Was "+rate);
         }
     }
     
