@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.Collections;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -31,8 +32,9 @@ import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
-import org.terasology.math.geom.Vector3i;
+import org.terasology.math.Region3i;
 import org.terasology.math.Side;
+import org.terasology.math.geom.Vector3i;
 import org.terasology.registry.In;
 import org.terasology.world.OnChangedBlock;
 import org.terasology.world.WorldProvider;
@@ -51,6 +53,8 @@ import static org.terasology.flowingliquids.world.block.LiquidData.setHeight;
 public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
 
     private static final Logger logger = LoggerFactory.getLogger(LiquidFlowSystem.class);
+    
+    private Random rand;
     
     @In
     private WorldProvider worldProvider;
@@ -74,6 +78,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         newEvenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
          newOddUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
         air = blockManager.getBlock(BlockManager.AIR_ID);
+        rand = new Random();
     }
     
     @ReceiveEvent
@@ -129,9 +134,9 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     
     @Override
     public void update(float delta) {
+        randomUpdate();
         timeSinceUpdate += delta;
         if(evenTick && evenUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
-            //logger.info("Odd  "+newOddUpdatePositions.size());
             evenTick = false;
             timeSinceUpdate = 0;
             Set <Vector3i> temp = oddUpdatePositions;
@@ -139,7 +144,6 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             newOddUpdatePositions = temp;
         }
         if(!evenTick && oddUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
-            //logger.info("Even "+newEvenUpdatePositions.size());
             evenTick = true;
             timeSinceUpdate = 0;
             Set <Vector3i> temp = evenUpdatePositions;
@@ -148,7 +152,6 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         }
         Iterator<Vector3i> updatePositions = (evenTick ? evenUpdatePositions : oddUpdatePositions).iterator();
         int numDone = 0;
-        boolean debug = false; //evenUpdatePositions.size() + oddUpdatePositions.size() < 20;
         while(numDone < 10 && updatePositions.hasNext()){
             Vector3i pos = updatePositions.next();
             updatePositions.remove();
@@ -165,7 +168,6 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                     startDirection = LiquidData.getDirection(blockStatus);
                     startRate = LiquidData.getRate(blockStatus);
                 }
-                if(debug) logger.info("Pondering "+pos+", "+blockType.getDisplayName()+" with h"+startHeight+"r"+startRate+"d"+startDirection);
                 
                 int height = startHeight;
                 height -= startRate;
@@ -256,8 +258,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             lowestRate = adjRate;
                         }
                     }
-                    rate = (height - lowestHeight)/2;
                     maxRate = height-lowestHeight+lowestRate;
+                    rate = maxRate/2;
                     if(rate > LiquidData.MAX_RATE) {
                         rate = LiquidData.MAX_RATE;
                     }
@@ -295,6 +297,35 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                     }
                 } else {
                     numDone--;
+                }
+            }
+        }
+    }
+    
+    private void randomUpdate() {
+        for(Region3i region : worldProvider.getRelevantRegions()) {
+            for(int i=0; i<10; i++) {
+                int x = region.minX() + rand.nextInt(region.sizeX());
+                int y = region.minY() + rand.nextInt(region.sizeY());
+                int z = region.minZ() + rand.nextInt(region.sizeZ());
+                if(((x+y+z)%2 == 0) != evenTick) {
+                    z += 1;
+                }
+                Vector3i pos = new Vector3i(x,y,z);
+                Block block = worldProvider.getBlock(pos);
+                if(block.isLiquid()) {
+                    byte status = worldProvider.getRawLiquid(pos);
+                    if(LiquidData.getRate(status) == 0) {
+                        Side direction = Side.horizontalSides().get(rand.nextInt(4));
+                        Vector3i adjPos = direction.getAdjacentPos(pos);
+                        Block adjBlock = worldProvider.getBlock(adjPos);
+                        if(adjBlock == block && getHeight(worldProvider.getRawLiquid(adjPos)) < getHeight(status) || canSmoosh(block, adjBlock)) {
+                            worldProvider.setRawLiquid(pos, LiquidData.setDirection(status, direction), status);
+                            doAddPos(pos);
+                            doAddPos(adjPos);
+                        }
+                        //worldProvider.setBlock(pos, air);
+                    }
                 }
             }
         }
