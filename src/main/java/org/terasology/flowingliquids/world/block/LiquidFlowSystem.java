@@ -42,12 +42,16 @@ import org.terasology.world.block.BlockManager;
 import org.terasology.world.block.items.OnBlockItemPlaced;
 import org.terasology.world.block.items.BlockItemComponent;
 import org.terasology.world.chunks.ChunkConstants;
+import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
+import org.terasology.world.chunks.blockdata.ExtraDataSystem;
+import org.terasology.world.chunks.blockdata.RegisterExtraData;
 import org.terasology.world.chunks.event.OnChunkLoaded;
 
 import static org.terasology.flowingliquids.world.block.LiquidData.getHeight;
 import static org.terasology.flowingliquids.world.block.LiquidData.setHeight;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
+@ExtraDataSystem
 public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
     
     private static final Logger logger = LoggerFactory.getLogger(LiquidFlowSystem.class);
@@ -61,6 +65,10 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private BlockManager blockManager;
     private Block air;
     
+    @In
+    private ExtraBlockDataManager extraDataManager;
+    private int flowIx;
+    
     private Set<Vector3i> evenUpdatePositions;
     private Set<Vector3i> oddUpdatePositions;
     private Set<Vector3i> newEvenUpdatePositions;
@@ -69,6 +77,11 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private float timeSinceUpdate;
     private static final float UPDATE_INTERVAL = 0.5f;
     
+    @RegisterExtraData(name = "flowingLiquids.flow", bitSize = 8)
+    public static boolean hasFlowData(Block block) {
+        return block.isLiquid();
+    }
+    
     @Override
     public void initialise() {
         evenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
@@ -76,6 +89,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         newEvenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
         newOddUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
         air = blockManager.getBlock(BlockManager.AIR_ID);
+        flowIx = extraDataManager.getSlotNumber("flowingLiquids.flow");
         rand = new Random();
     }
     
@@ -101,7 +115,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     @ReceiveEvent
     public void liquidPlaced(OnBlockItemPlaced event, EntityRef blockEntity, BlockItemComponent blockComponent) {
         if (blockComponent.blockFamily.getArchetypeBlock().isLiquid()) {
-            worldProvider.setRawLiquid(event.getPosition(), LiquidData.FULL, (byte) 0);
+            worldProvider.setExtraData(flowIx, event.getPosition(), LiquidData.FULL);
             addPos(event.getPosition());
         }
     }
@@ -153,7 +167,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             if (worldProvider.isBlockRelevant(pos)) {
                 numDone++;
                 Block blockType = worldProvider.getBlock(pos);
-                byte blockStatus = worldProvider.getRawLiquid(pos);
+                byte blockStatus = (byte) worldProvider.getExtraData(flowIx, pos);
                 int startHeight = 0;
                 Side startDirection = null;
                 int startRate = 0;
@@ -175,12 +189,12 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                 for (Side side : Side.values()) {
                     Vector3i adjPos = side.getAdjacentPos(pos);
                     Block adjBlock = worldProvider.getBlock(adjPos);
-                    byte adjStatus = worldProvider.getRawLiquid(adjPos);
+                    byte adjStatus = (byte) worldProvider.getExtraData(flowIx, adjPos);
                     if (adjBlock.isLiquid() && side.reverse() == LiquidData.getDirection(adjStatus)) {
                         if (adjBlock == blockType) {
                             int rate = LiquidData.getRate(adjStatus);
                             if (rate + height > LiquidData.MAX_HEIGHT) {
-                                worldProvider.setRawLiquid(adjPos, LiquidData.setRate(adjStatus, LiquidData.MAX_HEIGHT - height), adjStatus);
+                                worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, LiquidData.MAX_HEIGHT - height));
                                 height = LiquidData.MAX_HEIGHT;
                                 addPos(adjPos);
                             } else {
@@ -192,7 +206,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             height = LiquidData.getRate(adjStatus);
                             smooshed = true;
                         } else {
-                            worldProvider.setRawLiquid(adjPos, LiquidData.setRate(adjStatus, 0), adjStatus);
+                            worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
                             addPos(adjPos);
                         }
                     }
@@ -201,7 +215,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                 if(height == 0) {
                     if (blockType.isLiquid()) {
                         worldProvider.setBlock(pos, air);
-                        worldProvider.setRawLiquid(pos, (byte)0, blockStatus);
+                        worldProvider.setExtraData(flowIx, pos, 0);
                     } else {
                         numDone--;
                     }
@@ -222,7 +236,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                     rate = LiquidData.MAX_DOWN_RATE;
                 } else if (blockType == belowBlock) {
                     direction = Side.BOTTOM;
-                    byte belowStatus = worldProvider.getRawLiquid(below);
+                    byte belowStatus = (byte) worldProvider.getExtraData(flowIx, below);
                     rate = LiquidData.MAX_HEIGHT - getHeight(belowStatus);
                     maxRate = rate + LiquidData.getRate(belowStatus);
                     if (rate > LiquidData.MAX_DOWN_RATE) {
@@ -239,7 +253,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         int adjHeight;
                         int adjRate = 0;
                         if (adjBlock == blockType) {
-                            byte adjStatus = worldProvider.getRawLiquid(adjPos);
+                            byte adjStatus = (byte) worldProvider.getExtraData(flowIx, adjPos);
                             adjHeight = getHeight(adjStatus);
                             adjRate = LiquidData.getRate(adjStatus);
                         } else if (canSmoosh(blockType, adjBlock)) {
@@ -280,7 +294,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         direction),
                     rate);
                 if (newStatus != blockStatus || smooshed) {
-                    worldProvider.setRawLiquid(pos, newStatus, blockStatus);
+                    worldProvider.setExtraData(flowIx, pos, newStatus);
                     updateNear(pos);
                     if (direction != startDirection || rate != startRate) {
                         if (direction != null) {
@@ -313,13 +327,13 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                 Vector3i pos = new Vector3i(x, y, z);
                 Block block = worldProvider.getBlock(pos);
                 if (block.isLiquid()) {
-                    byte status = worldProvider.getRawLiquid(pos);
+                    byte status = (byte) worldProvider.getExtraData(flowIx, pos);
                     if (LiquidData.getRate(status) == 0) {
                         Side direction = Side.horizontalSides().get(rand.nextInt(4));
                         Vector3i adjPos = direction.getAdjacentPos(pos);
                         Block adjBlock = worldProvider.getBlock(adjPos);
-                        if (adjBlock == block && getHeight(worldProvider.getRawLiquid(adjPos)) < getHeight(status) || canSmoosh(block, adjBlock)) {
-                            worldProvider.setRawLiquid(pos, LiquidData.setDirection(status, direction), status);
+                        if (adjBlock == block && getHeight((byte)worldProvider.getExtraData(flowIx, adjPos)) < getHeight(status) || canSmoosh(block, adjBlock)) {
+                            worldProvider.setExtraData(flowIx, pos, LiquidData.setDirection(status, direction));
                             doAddPos(pos);
                             doAddPos(adjPos);
                         }

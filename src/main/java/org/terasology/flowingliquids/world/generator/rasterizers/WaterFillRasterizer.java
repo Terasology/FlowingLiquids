@@ -17,8 +17,10 @@
 package org.terasology.flowingliquids.world.rasterizers;
 
 import org.terasology.math.geom.Vector3i;
+import org.terasology.registry.CoreRegistry;
 import org.terasology.world.chunks.ChunkConstants;
 import org.terasology.world.chunks.CoreChunk;
+import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
 import org.terasology.world.generation.Region;
 import org.terasology.world.generation.WorldRasterizerPlugin;
 import org.terasology.world.generator.plugin.RegisterPlugin;
@@ -28,14 +30,18 @@ import org.terasology.flowingliquids.world.block.LiquidData;
 @RegisterPlugin
 public class WaterFillRasterizer implements WorldRasterizerPlugin {
     
+    private int flowIx;
+    
     @Override
-    public void initialize() {}
+    public void initialize() {
+        flowIx = CoreRegistry.get(ExtraBlockDataManager.class).getSlotNumber("flowingLiquids.flow");
+    }
     
     @Override
     public void generateChunk(CoreChunk chunk, Region chunkRegion) {
         for(Vector3i pos : ChunkConstants.CHUNK_REGION) {
             if(chunk.getBlock(pos).isLiquid()){
-                chunk.setRawLiquid(pos, LiquidData.FULL);
+                chunk.setExtraData(flowIx, pos, LiquidData.FULL);
             }
         }
     }

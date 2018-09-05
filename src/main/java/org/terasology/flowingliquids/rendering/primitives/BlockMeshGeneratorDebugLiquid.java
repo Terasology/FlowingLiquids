@@ -56,12 +56,15 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     private Block block;
     private Mesh mesh;
     
+    private int flowIx;
+    
     private static Vector4f colourOffset = new Vector4f(1,1,1,1);
     private static final float texCoordScale = 1/(1-2/128); //Compensates for the default calculations in mapTexCoords.
     private Vector2f[] textureOffsets;
     
-    public BlockMeshGeneratorDebugLiquid(Block block, WorldAtlas worldAtlas) {
+    public BlockMeshGeneratorDebugLiquid(Block block, WorldAtlas worldAtlas, int flowIx) {
         this.block = block;
+        this.flowIx = flowIx;
         textureOffsets = new Vector2f[9];
         ResourceUrn baseTile = new ResourceUrn("FlowingLiquids:DebugLiquid1");
         Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).scale(-1).add(new Vector2f(-texCoordScale/128/2, -texCoordScale/128));
@@ -74,7 +77,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     @Override
     public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
         Vector3i pos = new Vector3i(x,y,z);
-        int fluidHeight = LiquidData.getHeight(view.getRawLiquid(pos));
+        int fluidHeight = LiquidData.getHeight((byte)view.getExtraData(flowIx, pos));
         BlockAppearance appearance = block.getAppearance(null); //I know it's DebugLiquid, which doesn't vary its appearance.
         for(Side side : Side.values()) {
             if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {

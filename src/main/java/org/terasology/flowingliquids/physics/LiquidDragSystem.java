@@ -38,6 +38,7 @@ import org.terasology.registry.In;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
+import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
 
 import org.terasology.flowingliquids.world.block.LiquidData;
 
@@ -55,8 +56,14 @@ public class LiquidDragSystem extends BaseComponentSystem implements UpdateSubsc
     @In
     private EntityManager entityManager;
     
+    @In
+    private ExtraBlockDataManager extraDataManager;
+    private int flowIx;
+    
     @Override
-    public void initialise() {}
+    public void initialise() {
+        flowIx = extraDataManager.getSlotNumber("flowingLiquids.flow");
+    }
     
     @Override
     public void update(float delta) {
@@ -71,7 +78,7 @@ public class LiquidDragSystem extends BaseComponentSystem implements UpdateSubsc
                 Vector3i blockPos = new Vector3i(pos, RoundingMode.HALF_UP);
                 Block block = worldProvider.getBlock(blockPos);
                 if (block.isLiquid()) {
-                    byte status = worldProvider.getRawLiquid(blockPos);
+                    byte status = (byte) worldProvider.getExtraData(flowIx, blockPos);
                     int rate = LiquidData.getRate(status);
                     if (rate > 0) {
                         Side direction = LiquidData.getDirection(status);

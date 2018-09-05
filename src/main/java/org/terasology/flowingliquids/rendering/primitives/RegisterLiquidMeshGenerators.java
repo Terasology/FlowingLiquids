@@ -23,6 +23,7 @@ import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
 import org.terasology.world.block.tiles.WorldAtlas;
+import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
 
 @RegisterSystem(RegisterMode.CLIENT)
 public class RegisterLiquidMeshGenerators extends BaseComponentSystem {
@@ -33,17 +34,22 @@ public class RegisterLiquidMeshGenerators extends BaseComponentSystem {
     @In
     private WorldAtlas worldAtlas;
     
-    public void initialise(){
+    @In
+    private ExtraBlockDataManager extraDataManager;
+    private int flowIx;
+    
+    public void initialise(){}
+    public void preBegin(){}
+    public void postBegin() {
+        flowIx = extraDataManager.getSlotNumber("flowingLiquids.flow");
         Block debugLiquid = blockManager.getBlock("FlowingLiquids:DebugLiquid");
-        debugLiquid.setMeshGenerator(new BlockMeshGeneratorDebugLiquid(debugLiquid, worldAtlas));
+        debugLiquid.setMeshGenerator(new BlockMeshGeneratorDebugLiquid(debugLiquid, worldAtlas, flowIx));
         for(Block block : blockManager.listRegisteredBlocks()) {
             if(block.isLiquid() && block != debugLiquid) {
-                block.setMeshGenerator(new BlockMeshGeneratorLiquid(block, worldAtlas));
+                block.setMeshGenerator(new BlockMeshGeneratorLiquid(block, worldAtlas, flowIx));
             }
         }
     }
-    public void preBegin(){}
-    public void postBegin(){}
     public void preSave(){}
     public void postSave(){}
     public void shutdown(){}

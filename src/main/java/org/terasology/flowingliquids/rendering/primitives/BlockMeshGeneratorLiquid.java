@@ -59,9 +59,12 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
     private Block block;
     private Mesh mesh;
     
-    public BlockMeshGeneratorLiquid(Block block, WorldAtlas worldAtlas) {
+    private int flowIx;
+    
+    public BlockMeshGeneratorLiquid(Block block, WorldAtlas worldAtlas, int flowIx) {
         this.block = block;
         this.worldAtlas = worldAtlas;
+        this.flowIx = flowIx;
     }
     
     @Override
@@ -109,7 +112,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
     
     // The height of the liquid block, as it is displayed.
     private float getRenderHeight(ChunkView view, Vector3i pos) {
-        int height = LiquidData.getHeight(view.getRawLiquid(pos));
+        int height = LiquidData.getHeight((byte)view.getExtraData(flowIx, pos));
         float renderHeight = height / (float) LiquidData.MAX_HEIGHT;
         Block above = view.getBlock(Side.TOP.getAdjacentPos(pos));
         if(!above.isLiquid() && !above.isFullSide(Side.BOTTOM)) {
