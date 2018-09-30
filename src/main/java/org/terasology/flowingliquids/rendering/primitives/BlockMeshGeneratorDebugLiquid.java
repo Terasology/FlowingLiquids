@@ -65,7 +65,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     public BlockMeshGeneratorDebugLiquid(Block block, WorldAtlas worldAtlas, int flowIx) {
         this.block = block;
         this.flowIx = flowIx;
-        textureOffsets = new Vector2f[9];
+        textureOffsets = new Vector2f[17];
         ResourceUrn baseTile = new ResourceUrn("FlowingLiquids:DebugLiquid1");
         Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).scale(-1).add(new Vector2f(-texCoordScale/128/2, -texCoordScale/128));
         for(int i=1; i<=LiquidData.MAX_HEIGHT; i++){

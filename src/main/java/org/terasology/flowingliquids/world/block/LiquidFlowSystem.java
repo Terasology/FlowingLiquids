@@ -268,9 +268,9 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         }
                     }
                     maxRate = height-lowestHeight+lowestRate;
-                    rate = maxRate/2;
-                    if (rate > LiquidData.MAX_RATE) {
-                        rate = LiquidData.MAX_RATE;
+                    rate = maxRate - 1;
+                    if (maxRate > LiquidData.MAX_RATE) {
+                        maxRate = LiquidData.MAX_RATE;
                     }
                     direction = lowestSide;
                 }
