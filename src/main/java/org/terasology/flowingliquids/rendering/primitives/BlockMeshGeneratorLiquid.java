@@ -103,7 +103,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             }
             if(isSideVisibleForBlockTypes(adjacentBlock, adjacentHeight, block, renderHeight, side)) {
                 Vector4f colorOffset = block.calcColorOffsetFor(BlockPart.fromSide(side), biome);
-                BlockMeshPart basePart = block.getLoweredLiquidMesh(side);
+                BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart loweredPart = lowerPart(side, basePart, renderHeight, adjacentHeight);
                 loweredPart.appendTo(chunkMesh, x, y, z, colorOffset, renderType, vertexFlag);
             }
@@ -136,19 +136,15 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
         }
         if(side == Side.TOP) {
             for(int i=0; i<vertices.length; i++) {
-                vertices[i].add(0, height-0.9f, 0);
+                vertices[i].add(0, height-1f, 0);
             }
-        } else if(side == Side.BOTTOM) {
-            for(int i=0; i<vertices.length; i++) {
-                vertices[i].add(0, 0.1f, 0);
-            }
-        } else {
+        } else if(side != Side.BOTTOM) {
             for(int i=0; i<vertices.length; i++) {
                 if(vertices[i].y > 0) {
-                    vertices[i].add(0, height-0.9f, 0);
+                    vertices[i].add(0, height-1f, 0);
                     texCoords[i].add(0, -(height-1) * worldAtlas.getRelativeTileSize());
                 } else {
-                    vertices[i].add(0, otherHeight+0.1f, 0);
+                    vertices[i].add(0, otherHeight, 0);
                     texCoords[i].add(0, -otherHeight * worldAtlas.getRelativeTileSize());
                 }
             }
