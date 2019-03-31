@@ -37,7 +37,6 @@ import org.terasology.rendering.primitives.ChunkVertexFlag;
 import org.terasology.rendering.primitives.Tessellator;
 import org.terasology.registry.CoreRegistry;
 import org.terasology.world.ChunkView;
-import org.terasology.world.biomes.Biome;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockAppearance;
 import org.terasology.world.block.BlockPart;
@@ -70,7 +69,6 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
     @Override
     public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
         Vector3i pos = new Vector3i(x,y,z);
-        Biome biome = view.getBiome(pos);
         float renderHeight = getRenderHeight(view, pos);
         
         ChunkVertexFlag vertexFlag = ChunkVertexFlag.NORMAL;
@@ -102,10 +100,10 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
                 adjacentHeight = 0;
             }
             if(isSideVisibleForBlockTypes(adjacentBlock, adjacentHeight, block, renderHeight, side)) {
-                Vector4f colorOffset = block.calcColorOffsetFor(BlockPart.fromSide(side), biome);
+//                Vector4f colorOffset = block.calcColorOffsetFor(BlockPart.fromSide(side), biome);
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart loweredPart = lowerPart(side, basePart, renderHeight, adjacentHeight);
-                loweredPart.appendTo(chunkMesh, x, y, z, colorOffset, renderType, vertexFlag);
+                loweredPart.appendTo(chunkMesh, x, y, z, renderType, vertexFlag);
             }
         }
     }
