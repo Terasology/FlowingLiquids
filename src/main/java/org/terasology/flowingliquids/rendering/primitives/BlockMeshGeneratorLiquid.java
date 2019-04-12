@@ -80,8 +80,6 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             } else {
                 vertexFlag = ChunkVertexFlag.WATER_SURFACE;
             }
-        } else if (block.isLava()) {
-            vertexFlag = ChunkVertexFlag.LAVA;
         }
         
         ChunkMesh.RenderType renderType = ChunkMesh.RenderType.TRANSLUCENT;
