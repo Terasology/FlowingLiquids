@@ -82,8 +82,8 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
         for(Side side : Side.values()) {
             if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
-                BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], texCoordScale, 1);
-                labelledPart.appendTo(chunkMesh, x, y, z, colourOffset, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
+                BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], texCoordScale,1);
+                labelledPart.appendTo(chunkMesh, x, y, z, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
             }
         }
     }
