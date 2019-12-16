@@ -45,6 +45,7 @@ import org.terasology.world.block.tiles.BlockTile;
 import org.terasology.world.block.tiles.WorldAtlas;
 
 import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.world.generation.Region;
 
 /**
  * As the default block mesh generator does not allow the mesh to depend on
@@ -67,25 +68,24 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
     }
     
     @Override
-    public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
+    public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, Region worldData, int x, int y, int z) {
+        final Block selfBlock = view.getBlock(x, y, z);
         Vector3i pos = new Vector3i(x,y,z);
         float renderHeight = getRenderHeight(view, pos);
         
         ChunkVertexFlag vertexFlag = ChunkVertexFlag.NORMAL;
-        if (block.isWater()) {
+        ChunkMesh.RenderType renderType = ChunkMesh.RenderType.TRANSLUCENT;
+
+        if (!selfBlock.isTranslucent()) {
+            renderType = ChunkMesh.RenderType.OPAQUE;
+        }
+
+        if (selfBlock.isWater()) {
             if (renderHeight == 1) {
                 vertexFlag = ChunkVertexFlag.WATER;
             } else {
                 vertexFlag = ChunkVertexFlag.WATER_SURFACE;
             }
-        }
-        
-        ChunkMesh.RenderType renderType = ChunkMesh.RenderType.TRANSLUCENT;
-
-        if (!block.isTranslucent()) {
-            renderType = ChunkMesh.RenderType.OPAQUE;
-        }
-        if (block.isWater()) {
             renderType = ChunkMesh.RenderType.WATER_AND_ICE;
         }
         
@@ -101,7 +101,10 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
 //                Vector4f colorOffset = block.calcColorOffsetFor(BlockPart.fromSide(side), biome);
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart loweredPart = lowerPart(side, basePart, renderHeight, adjacentHeight);
-                loweredPart.appendTo(chunkMesh, x, y, z, renderType, vertexFlag);
+                Vector4f colorOffset = selfBlock.getColorOffset(BlockPart.fromSide(side));
+                Vector4f colorSource = selfBlock.getColorSource(BlockPart.fromSide(side)).calcColor(worldData, x, y, z);
+                Vector4f colorResult = new Vector4f(colorSource.x * colorOffset.x, colorSource.y * colorOffset.y, colorSource.z * colorOffset.z, colorSource.w * colorOffset.w);
+                loweredPart.appendTo(chunkMesh, x, y, z, renderType, colorResult, vertexFlag);
             }
         }
     }

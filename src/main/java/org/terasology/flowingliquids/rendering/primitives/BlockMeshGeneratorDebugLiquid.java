@@ -44,6 +44,7 @@ import org.terasology.world.block.tiles.BlockTile;
 import org.terasology.world.block.tiles.WorldAtlas;
 
 import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.world.generation.Region;
 
 /**
  * As the default block mesh generator does not allow the mesh to depend on
@@ -75,15 +76,15 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     }
     
     @Override
-    public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
+    public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, Region worldData, int x, int y, int z) {
         Vector3i pos = new Vector3i(x,y,z);
         int fluidHeight = LiquidData.getHeight((byte)view.getExtraData(flowIx, pos));
-        BlockAppearance appearance = block.getAppearance(null); //I know it's DebugLiquid, which doesn't vary its appearance.
+        BlockAppearance appearance = block.getPrimaryAppearance(); //I know it's DebugLiquid, which doesn't vary its appearance.
         for(Side side : Side.values()) {
             if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], texCoordScale,1);
-                labelledPart.appendTo(chunkMesh, x, y, z, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
+                labelledPart.appendTo(chunkMesh, x, y, z, ChunkMesh.RenderType.OPAQUE, colourOffset, ChunkVertexFlag.NORMAL);
             }
         }
     }
