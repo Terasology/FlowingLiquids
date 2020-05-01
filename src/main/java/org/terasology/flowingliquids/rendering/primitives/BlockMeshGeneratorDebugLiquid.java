@@ -15,35 +15,27 @@
  */
 
 package org.terasology.flowingliquids.rendering.primitives;
- 
-import com.google.common.collect.Maps;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-
 import org.terasology.assets.ResourceUrn;
+import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.math.JomlUtil;
 import org.terasology.math.Side;
+import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3i;
 import org.terasology.math.geom.Vector4f;
-import org.terasology.math.geom.Vector2f;
-import org.terasology.registry.In;
 import org.terasology.rendering.assets.mesh.Mesh;
 import org.terasology.rendering.primitives.BlockMeshGenerator;
 import org.terasology.rendering.primitives.ChunkMesh;
 import org.terasology.rendering.primitives.ChunkVertexFlag;
 import org.terasology.rendering.primitives.Tessellator;
-import org.terasology.registry.CoreRegistry;
 import org.terasology.world.ChunkView;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockAppearance;
 import org.terasology.world.block.BlockPart;
 import org.terasology.world.block.shapes.BlockMeshPart;
-import org.terasology.world.block.tiles.BlockTile;
 import org.terasology.world.block.tiles.WorldAtlas;
-
-import org.terasology.flowingliquids.world.block.LiquidData;
 
 /**
  * As the default block mesh generator does not allow the mesh to depend on
@@ -82,7 +74,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
         for(Side side : Side.values()) {
             if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
-                BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], texCoordScale,1);
+                BlockMeshPart labelledPart = basePart.mapTexCoords(JomlUtil.from(textureOffsets[fluidHeight]), texCoordScale,1);
                 labelledPart.appendTo(chunkMesh, x, y, z, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
             }
         }
