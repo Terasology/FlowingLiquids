@@ -1,9 +1,10 @@
 {
-    "id" : "FlowingLiquids",
-    "version" : "0.7.2-SNAPSHOT",
-    "author" : "4Denthusiast",
-    "displayName" : "FlowingLiquids",
-    "description" : "Lets water flow, conserving its volume.",
-    "dependencies" : [],
-    "serverSideOnly" : false
+    "id": "FlowingLiquids",
+    "version": "1.0.0",
+    "author": "4Denthusiast",
+    "displayName": "FlowingLiquids",
+    "description": "Lets water flow, conserving its volume.",
+    "dependencies": [],
+    "serverSideOnly": false,
+    "isLibrary": true
 }
