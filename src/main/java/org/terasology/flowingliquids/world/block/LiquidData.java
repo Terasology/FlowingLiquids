@@ -25,7 +25,7 @@ public class LiquidData {
     public static final int MAX_HEIGHT = 16;
     public static final int MAX_RATE = 2;
     public static final int MAX_DOWN_RATE = 4;
-    public static final byte FULL = (byte) 0b0_110_1111;
+    public static final byte FULL = (byte) 0b0_000_0000;
     
     /**
      * Extracts the amount of liquid in the block from a byte of liquid data.
@@ -33,7 +33,7 @@ public class LiquidData {
      * @return The height as an int
      */
     public static int getHeight(byte status){
-        return (int) (status & 0b0_000_1111)+1;
+        return (int) MAX_HEIGHT - (status & 0b0_000_1111);
     }
     
     /**
@@ -44,8 +44,8 @@ public class LiquidData {
      */
     public static byte setHeight(byte status, int height){
         if (height < 1 || height > MAX_HEIGHT)
-            throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to 8.");
-        return (byte) ((status & ~0b0_000_1111) | (height-1));
+            throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to "+MAX_HEIGHT+".");
+        return (byte) ((status & ~0b0_000_1111) | (MAX_HEIGHT-height));
     }
 
     /**
@@ -55,10 +55,10 @@ public class LiquidData {
      */
     public static Side getDirection(byte status) {
         int sideData = sideData(status);
-        if (sideData < 6) {
-            return Side.values()[sideData];
-        } else if (sideData == 6) {
+        if (sideData == 0) {
             return null;
+        } else if (sideData < 7) {
+            return Side.values()[sideData-1];
         } else { // sideData == 7
             return Side.BOTTOM;
         }
@@ -71,7 +71,7 @@ public class LiquidData {
      * @return The modified byte
      */
     public static byte setDirection(byte status, Side side) {
-        int sideData = side == null ? 6 : side.ordinal();
+        int sideData = side == null ? 0 : side.ordinal()+1;
         return (byte) ((status & ~0b1_111_0000) | (sideData << 4));
     }
     
@@ -83,10 +83,10 @@ public class LiquidData {
     public static int getRate(byte status) {
         int rateData = (status & 0b1_000_0000) >> 7;
         int sideData = sideData(status);
-        if (sideData < 6) {
-            return rateData + 1;
-        } else if (sideData == 6) {
+        if (sideData == 0) {
             return 0;
+        } else if (sideData < 7) {
+            return rateData + 1;
         } else { // sideData == 7
             return rateData + 3;
         }
@@ -102,14 +102,14 @@ public class LiquidData {
         int sideData = sideData(status);
         if (rate == 0) {
             return setDirection(status, null);
-        } else if ((rate == 1 || rate == 2) && sideData < 6) {
+        } else if (sideData == 0) {
+            throw new IllegalArgumentException("Can't set rate > 0 as there is no current direction.");
+        } else if ((rate == 1 || rate == 2) && sideData < 7) {
             return (byte) ((status & ~0b1_000_0000) | (rate - 1 << 7));
         } else if ((rate == 1 || rate == 2) && sideData == 7) {
-            return (byte) ((status & ~0b1_111_0000) | (rate - 1 << 7) | (Side.BOTTOM.ordinal() << 4));
-        } else if ((rate == 3 || rate == 4) && (sideData == 7 || sideData == Side.BOTTOM.ordinal())) {
+            return (byte) ((status & ~0b1_111_0000) | (rate - 1 << 7) | ((Side.BOTTOM.ordinal() + 1) << 4));
+        } else if ((rate == 3 || rate == 4) && (sideData == 7 || sideData == (Side.BOTTOM.ordinal()+1))) {
             return (byte) ((status & ~0b1_111_0000) | (rate - 3 << 7) | (7 << 4));
-        } else if (sideData == 6) {
-            throw new IllegalArgumentException("Can't set rate > 0 as there is no current direction.");
         } else {
             throw new IllegalArgumentException("Liquid rates are constrained to the range 0 to 2 (or 4 for downwards). Was "+rate);
         }
