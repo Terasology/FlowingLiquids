@@ -27,14 +27,18 @@ import org.slf4j.LoggerFactory;
 
 import org.terasology.entitySystem.entity.EntityRef;
 import org.terasology.entitySystem.event.ReceiveEvent;
+import org.terasology.entitySystem.prefab.PrefabManager;
+import org.terasology.entitySystem.prefab.Prefab;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
+import org.terasology.logic.health.DestroyEvent;
 import org.terasology.math.Region3i;
 import org.terasology.math.Side;
 import org.terasology.math.geom.Vector3i;
 import org.terasology.registry.In;
+import org.terasology.world.BlockEntityRegistry;
 import org.terasology.world.OnChangedBlock;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
@@ -69,6 +73,13 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private ExtraBlockDataManager extraDataManager;
     private int flowIx;
     
+    @In
+    private PrefabManager prefabManager;
+    private Prefab smooshingDamageType;
+    
+    @In
+    private BlockEntityRegistry blockEntityRegistry;
+    
     private Set<Vector3i> evenUpdatePositions;
     private Set<Vector3i> oddUpdatePositions;
     private Set<Vector3i> newEvenUpdatePositions;
@@ -90,6 +101,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         newOddUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
         air = blockManager.getBlock(BlockManager.AIR_ID);
         flowIx = extraDataManager.getSlotNumber("flowingLiquids.flow");
+        smooshingDamageType = prefabManager.getPrefab("flowingLiquids:smooshingDamage");
         rand = new Random();
     }
     
@@ -201,10 +213,15 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                                 height += rate;
                             }
                         } else if (canSmoosh(adjBlock, blockType)) {
-                            blockType = adjBlock;
-                            worldProvider.setBlock(pos, adjBlock);
-                            height = LiquidData.getRate(adjStatus);
-                            smooshed = true;
+                            if (blockType != air) {
+                                blockEntityRegistry.getBlockEntityAt(pos).send(new DestroyEvent(EntityRef.NULL, EntityRef.NULL, smooshingDamageType));
+                            }
+                            if (worldProvider.getBlock(pos) == air) { // Check the event didn't get cancelled or something.
+                                blockType = adjBlock;
+                                worldProvider.setBlock(pos, adjBlock);
+                                height = LiquidData.getRate(adjStatus);
+                                smooshed = true;
+                            }
                         } else {
                             worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
                             addPos(adjPos);
@@ -353,7 +370,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      * @return True if it can, false otherwise
      */
     private boolean canSmoosh(Block liquid, Block replacing) {
-        return replacing == air;
+        return replacing == air || (replacing.isPenetrable() && !replacing.isLiquid());
     }
     
     /**
