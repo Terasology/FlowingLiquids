@@ -257,7 +257,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             adjHeight = getHeight(adjStatus);
                             adjRate = LiquidData.getRate(adjStatus);
                         } else if (canSmoosh(blockType, adjBlock)) {
-                            adjHeight = 0;
+                            Block belowAdjBlock = worldProvider.getBlock(Side.BOTTOM.getAdjacentPos(adjPos)); 
+                            adjHeight = blockType == belowAdjBlock || canSmoosh(blockType, belowAdjBlock) ? -1 : 0;
                         } else {
                             adjHeight = LiquidData.MAX_HEIGHT + 1;
                         }
@@ -268,14 +269,15 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         }
                     }
                     maxRate = height-lowestHeight+lowestRate;
-                    rate = maxRate - 1;
+                    if (lowestSide == startDirection) {
+                        rate = maxRate;
+                    } else {
+                        rate = maxRate - 1;
+                    }
                     if (maxRate > LiquidData.MAX_RATE) {
                         maxRate = LiquidData.MAX_RATE;
                     }
                     direction = lowestSide;
-                }
-                if (direction == startDirection && !smooshed && rate < startRate) {
-                    rate = startRate;
                 }
                 if (rate > maxRate) {
                     rate = maxRate;
