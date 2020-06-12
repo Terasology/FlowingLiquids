@@ -88,7 +88,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private float timeSinceUpdate;
     private static final float UPDATE_INTERVAL = 0.5f;
     
-    @RegisterExtraData(name = "flowingLiquids.flow", bitSize = 8)
+    @RegisterExtraData(name = LiquidData.EXTRA_DATA_NAME, bitSize = 8)
     public static boolean hasFlowData(Block block) {
         return block.isLiquid();
     }
@@ -100,7 +100,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         newEvenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
         newOddUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
         air = blockManager.getBlock(BlockManager.AIR_ID);
-        flowIx = extraDataManager.getSlotNumber("flowingLiquids.flow");
+        flowIx = extraDataManager.getSlotNumber(LiquidData.EXTRA_DATA_NAME);
         smooshingDamageType = prefabManager.getPrefab("flowingLiquids:smooshingDamage");
         rand = new Random();
     }

@@ -26,6 +26,7 @@ public class LiquidData {
     public static final int MAX_RATE = 2;
     public static final int MAX_DOWN_RATE = 4;
     public static final byte FULL = (byte) 0b0_000_0000;
+    public static final String EXTRA_DATA_NAME = "flowingLiquids.flow";
     
     /**
      * Extracts the amount of liquid in the block from a byte of liquid data.
