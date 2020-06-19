@@ -15,36 +15,29 @@
  */
 
 package org.terasology.flowingliquids.rendering.primitives;
- 
-import com.google.common.collect.Maps;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-
 import org.terasology.assets.ResourceUrn;
+import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.math.JomlUtil;
 import org.terasology.math.Side;
-import org.terasology.math.geom.Vector3i;
-import org.terasology.math.geom.Vector4f;
-import org.terasology.math.geom.Vector3f;
 import org.terasology.math.geom.Vector2f;
-import org.terasology.registry.In;
+import org.terasology.math.geom.Vector3f;
+import org.terasology.math.geom.Vector3i;
 import org.terasology.rendering.assets.mesh.Mesh;
 import org.terasology.rendering.primitives.BlockMeshGenerator;
 import org.terasology.rendering.primitives.ChunkMesh;
 import org.terasology.rendering.primitives.ChunkVertexFlag;
 import org.terasology.rendering.primitives.Tessellator;
-import org.terasology.registry.CoreRegistry;
 import org.terasology.world.ChunkView;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockAppearance;
 import org.terasology.world.block.BlockPart;
 import org.terasology.world.block.shapes.BlockMeshPart;
-import org.terasology.world.block.tiles.BlockTile;
 import org.terasology.world.block.tiles.WorldAtlas;
 
-import org.terasology.flowingliquids.world.block.LiquidData;
+import java.util.Arrays;
 
 /**
  * As the default block mesh generator does not allow the mesh to depend on
@@ -123,9 +116,9 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
         Vector2f[] texCoords = new Vector2f[basePart.size()];
         int[]      indices   = new      int[basePart.indicesSize()];
         for(int i=0; i<basePart.size(); i++) {
-            vertices[i] = new Vector3f(basePart.getVertex(i));
-            normals[i]  = new Vector3f(basePart.getNormal(i));
-            texCoords[i]= new Vector2f(basePart.getTexCoord(i));
+            vertices[i] = JomlUtil.from(basePart.getVertex(i));
+            normals[i]  = JomlUtil.from(basePart.getNormal(i));
+            texCoords[i]= JomlUtil.from(basePart.getTexCoord(i));
         }
         for(int i=0; i<basePart.indicesSize(); i++) {
             indices[i] = basePart.getIndex(i);
@@ -145,7 +138,20 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
                 }
             }
         }
-        return new BlockMeshPart(vertices, normals, texCoords, indices);
+        return new BlockMeshPart(
+                teraMathToJomlArray(vertices), teraMathToJomlArray(normals), teraMathToJomlArray(texCoords), indices);
+    }
+
+    private org.joml.Vector3f[] teraMathToJomlArray(Vector3f[] vectors) {
+        return Arrays.stream(vectors)
+                .map(JomlUtil::from)
+                .toArray(org.joml.Vector3f[]::new);
+    }
+
+    private org.joml.Vector2f[] teraMathToJomlArray(Vector2f[] vectors) {
+        return Arrays.stream(vectors)
+                .map(JomlUtil::from)
+                .toArray(org.joml.Vector2f[]::new);
     }
     
     private boolean isSideVisibleForBlockTypes(Block blockToCheck, float heightToCheck, Block currentBlock, float currentHeight, Side side) {
