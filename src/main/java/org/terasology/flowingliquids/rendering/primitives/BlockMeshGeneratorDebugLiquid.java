@@ -51,7 +51,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     private int flowIx;
     
     private static Vector4f colourOffset = new Vector4f(1,1,1,1);
-    private static final float texCoordScale = 1/(1-2/128); //Compensates for the default calculations in mapTexCoords.
+    private static final float texCoordScale = 1/(1-2/128f); //Compensates for the default calculations in mapTexCoords.
     private Vector2f[] textureOffsets;
     
     public BlockMeshGeneratorDebugLiquid(Block block, WorldAtlas worldAtlas, int flowIx) {
@@ -59,7 +59,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
         this.flowIx = flowIx;
         textureOffsets = new Vector2f[17];
         ResourceUrn baseTile = new ResourceUrn("FlowingLiquids:DebugLiquid1");
-        Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).scale(-1).add(new Vector2f(-texCoordScale/128/2, -texCoordScale/128/2));
+        Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).scale(-1).add(new Vector2f(-texCoordScale/128, -texCoordScale/128));
         for(int i=1; i<=LiquidData.MAX_HEIGHT; i++){
             ResourceUrn tile = new ResourceUrn("FlowingLiquids:DebugLiquid"+i);
             textureOffsets[i] = worldAtlas.getTexCoords(tile, true).add(baseOffset);
