@@ -274,8 +274,14 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             adjHeight = getHeight(adjStatus);
                             adjRate = LiquidData.getRate(adjStatus);
                         } else if (canSmoosh(blockType, adjBlock)) {
-                            Block belowAdjBlock = worldProvider.getBlock(Side.BOTTOM.getAdjacentPos(adjPos)); 
-                            adjHeight = blockType == belowAdjBlock || canSmoosh(blockType, belowAdjBlock) ? -1 : 0;
+                            Block belowAdjBlock = worldProvider.getBlock(Side.BOTTOM.getAdjacentPos(adjPos));
+                            if (canSmoosh(blockType, belowAdjBlock)) {
+                                adjHeight = -1;
+                            } else if (blockType == belowAdjBlock && getHeight((byte) worldProvider.getExtraData(flowIx, Side.BOTTOM.getAdjacentPos(adjPos))) < LiquidData.MAX_HEIGHT) {
+                                adjHeight = -1;
+                            } else {
+                                adjHeight = 0;
+                            }
                         } else {
                             adjHeight = LiquidData.MAX_HEIGHT + 1;
                         }
