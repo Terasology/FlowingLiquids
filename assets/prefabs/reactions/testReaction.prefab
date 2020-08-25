@@ -1,0 +1,6 @@
+{
+  "LiquidSmooshingReaction" : {
+    "liquid" : "FlowingLiquids:DebugLiquid",
+    "block" : "CoreAssets:Sand"
+  }
+}

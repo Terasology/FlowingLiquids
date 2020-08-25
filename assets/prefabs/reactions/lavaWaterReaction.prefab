@@ -1,0 +1,9 @@
+{
+  "LiquidSmooshingReaction" : {
+    "liquid" : "CoreAssets:Water",
+    "block" : "CoreAssets:Lava",
+    "product" : "CoreAssets:Stone",
+    "liquidRequired" : 0.5,
+    "reversible" : true
+  }
+}

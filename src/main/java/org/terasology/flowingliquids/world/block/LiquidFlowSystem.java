@@ -16,11 +16,7 @@
 
 package org.terasology.flowingliquids.world.block;
 
-import java.util.Iterator;
-import java.util.Set;
-import java.util.LinkedHashSet;
-import java.util.Collections;
-import java.util.Random;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +39,7 @@ import org.terasology.world.OnChangedBlock;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
+import org.terasology.world.block.family.BlockFamily;
 import org.terasology.world.block.items.OnBlockItemPlaced;
 import org.terasology.world.block.items.BlockItemComponent;
 import org.terasology.world.chunks.ChunkConstants;
@@ -79,6 +76,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     
     @In
     private BlockEntityRegistry blockEntityRegistry;
+
+    private Map<Block, Map<BlockFamily, LiquidSmooshingReactionComponent>> smooshingReactions;
     
     private Set<Vector3i> evenUpdatePositions;
     private Set<Vector3i> oddUpdatePositions;
@@ -102,7 +101,34 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         air = blockManager.getBlock(BlockManager.AIR_ID);
         flowIx = extraDataManager.getSlotNumber(LiquidData.EXTRA_DATA_NAME);
         smooshingDamageType = prefabManager.getPrefab("flowingLiquids:smooshingDamage");
+        smooshingReactions = new HashMap<>();
+        for (Prefab prefab : prefabManager.listPrefabs(LiquidSmooshingReactionComponent.class)) {
+            LiquidSmooshingReactionComponent reaction = prefab.getComponent(LiquidSmooshingReactionComponent.class);
+            if (blockManager.getBlock(reaction.liquid) == air || blockManager.getBlock(reaction.block) == air) {
+                // Possibly the module containing the required blocks isn't actually loaded, so the reaction can be safely ignored.
+                continue;
+            }
+            addReaction(reaction);
+            if (reaction.reversible) {
+                LiquidSmooshingReactionComponent reversed = new LiquidSmooshingReactionComponent();
+                reversed.liquid = reaction.block;
+                reversed.block = reaction.liquid;
+                reversed.product = reaction.product;
+                reversed.liquidRequired = reaction.otherLiquidRequired;
+                reversed.otherLiquidRequired = reaction.liquidRequired;
+                addReaction(reversed);
+            }
+        }
         rand = new Random();
+    }
+
+    private void addReaction(LiquidSmooshingReactionComponent reaction) {
+        Block liquid = blockManager.getBlock(reaction.liquid);
+        BlockFamily block = blockManager.getBlockFamily(reaction.block);
+        if (!smooshingReactions.containsKey(liquid)) {
+            smooshingReactions.put(liquid, new HashMap<>());
+        }
+        smooshingReactions.get(liquid).put(block, reaction);
     }
     
     /**
@@ -213,14 +239,43 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                                 height += rate;
                             }
                         } else if (canSmoosh(adjBlock, blockType)) {
-                            if (blockType != air) {
-                                blockEntityRegistry.getBlockEntityAt(pos).send(new DestroyEvent(EntityRef.NULL, EntityRef.NULL, smooshingDamageType));
-                            }
-                            if (worldProvider.getBlock(pos) == air) { // Check the event didn't get cancelled or something.
-                                blockType = adjBlock;
-                                worldProvider.setBlock(pos, adjBlock);
-                                height = LiquidData.getRate(adjStatus);
-                                smooshed = true;
+                            LiquidSmooshingReactionComponent reaction = getSmooshingReaction(adjBlock, blockType);
+                            if (reaction == null || reaction.product == null) {
+                                if (blockType != air) {
+                                    blockEntityRegistry.getBlockEntityAt(pos).send(new DestroyEvent(EntityRef.NULL, EntityRef.NULL, smooshingDamageType));
+                                }
+                                if (worldProvider.getBlock(pos) == air) { // Check the event didn't get cancelled or something.
+                                    blockType = adjBlock;
+                                    worldProvider.setBlock(pos, adjBlock);
+                                    height = LiquidData.getRate(adjStatus);
+                                    smooshed = true;
+                                }
+                            } else {
+                                float otherSufficiency = LiquidData.getRate(adjStatus) / (float) LiquidData.MAX_HEIGHT / reaction.liquidRequired;
+                                float thisSufficiency = blockType.isLiquid() ? height / (float) LiquidData.MAX_HEIGHT / reaction.otherLiquidRequired : 1f;
+                                // There's a much more efficient way of doing this without the loop, but this way is clearer.
+                                boolean thisSufficient = false;
+                                boolean otherSufficient = false;
+                                while (!thisSufficient && !otherSufficient) {
+                                    thisSufficient = rand.nextFloat() < thisSufficiency;
+                                    otherSufficient = rand.nextFloat() < otherSufficiency;
+                                }
+
+                                if (thisSufficient && otherSufficient) {
+                                    blockType = blockManager.getBlock(reaction.product);
+                                    if (otherSufficiency > 1 && rand.nextFloat() < 1/otherSufficiency) {
+                                        worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
+                                    }
+                                    worldProvider.setBlock(pos, blockType);
+                                    if (blockType.isLiquid()) {
+                                        height = LiquidData.MAX_HEIGHT;
+                                    }
+                                } else if (otherSufficient) {
+                                    // consume this block but not the liquid flowing in.
+                                    worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
+                                    blockType = air;
+                                    worldProvider.setBlock(pos, air);
+                                } // In the other case, thisSufficient && !otherSufficient, consume the liquid flowing in but not this block.
                             }
                         } else {
                             worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
@@ -375,9 +430,22 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      * @return True if it can, false otherwise
      */
     private boolean canSmoosh(Block liquid, Block replacing) {
-        return replacing == air || (replacing.isPenetrable() && !replacing.isLiquid());
+        if (replacing == air || (replacing.isPenetrable() && !replacing.isLiquid())) {
+            return true;
+        } else if (!smooshingReactions.containsKey(liquid)) {
+            return false;
+        } else {
+            return smooshingReactions.get(liquid).containsKey(replacing.getBlockFamily());
+        }
     }
-    
+
+    /**
+     * Get the details of the interaction when these blocks meet, or null for the default reaction.
+     */
+    private LiquidSmooshingReactionComponent getSmooshingReaction(Block liquid, Block replacing) {
+        return smooshingReactions.containsKey(liquid) ? smooshingReactions.get(liquid).get(replacing.getBlockFamily()) : null;
+    }
+
     /**
      * Add a position to be checked.
      *
