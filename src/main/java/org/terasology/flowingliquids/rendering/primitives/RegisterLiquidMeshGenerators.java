@@ -16,6 +16,7 @@
 
 package org.terasology.flowingliquids.rendering.primitives;
 
+import org.terasology.math.Side;
 import org.terasology.registry.In;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
 import org.terasology.entitySystem.systems.RegisterSystem;
@@ -47,6 +48,10 @@ public class RegisterLiquidMeshGenerators extends BaseComponentSystem {
         for(Block block : blockManager.listRegisteredBlocks()) {
             if(block.isLiquid() && block != debugLiquid) {
                 block.setMeshGenerator(new BlockMeshGeneratorLiquid(block, worldAtlas, flowIx));
+                for (Side side : Side.values()) {
+                    // The rendered shapes won't have full sides, even if the basic shape does.
+                    block.setFullSide(side, false);
+                }
             }
         }
     }
