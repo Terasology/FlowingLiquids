@@ -18,8 +18,8 @@ package org.terasology.flowingliquids.rendering.primitives;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terasology.assets.ResourceUrn;
 import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.gestalt.assets.ResourceUrn;
 import org.terasology.math.JomlUtil;
 import org.terasology.math.Side;
 import org.terasology.math.geom.Vector2f;
