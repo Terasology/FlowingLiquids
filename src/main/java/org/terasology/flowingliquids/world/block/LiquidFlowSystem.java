@@ -1,97 +1,80 @@
-/*
- * Copyright 2018 MovingBlocks
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2020 The Terasology Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.flowingliquids.world.block;
 
-import java.util.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.terasology.entitySystem.entity.EntityRef;
-import org.terasology.entitySystem.event.ReceiveEvent;
-import org.terasology.entitySystem.prefab.PrefabManager;
-import org.terasology.entitySystem.prefab.Prefab;
-import org.terasology.entitySystem.systems.BaseComponentSystem;
-import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.entitySystem.systems.RegisterMode;
-import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
-import org.terasology.logic.health.DestroyEvent;
-import org.terasology.math.Region3i;
-import org.terasology.math.Side;
+import org.terasology.engine.entitySystem.entity.EntityRef;
+import org.terasology.engine.entitySystem.event.ReceiveEvent;
+import org.terasology.engine.entitySystem.prefab.Prefab;
+import org.terasology.engine.entitySystem.prefab.PrefabManager;
+import org.terasology.engine.entitySystem.systems.BaseComponentSystem;
+import org.terasology.engine.entitySystem.systems.RegisterMode;
+import org.terasology.engine.entitySystem.systems.RegisterSystem;
+import org.terasology.engine.entitySystem.systems.UpdateSubscriberSystem;
+import org.terasology.engine.logic.destruction.DestroyEvent;
+import org.terasology.engine.math.Region3i;
+import org.terasology.engine.math.Side;
+import org.terasology.engine.registry.In;
+import org.terasology.engine.world.BlockEntityRegistry;
+import org.terasology.engine.world.OnChangedBlock;
+import org.terasology.engine.world.WorldProvider;
+import org.terasology.engine.world.block.Block;
+import org.terasology.engine.world.block.BlockManager;
+import org.terasology.engine.world.block.family.BlockFamily;
+import org.terasology.engine.world.block.items.BlockItemComponent;
+import org.terasology.engine.world.block.items.OnBlockItemPlaced;
+import org.terasology.engine.world.chunks.ChunkConstants;
+import org.terasology.engine.world.chunks.blockdata.ExtraBlockDataManager;
+import org.terasology.engine.world.chunks.blockdata.ExtraDataSystem;
+import org.terasology.engine.world.chunks.blockdata.RegisterExtraData;
+import org.terasology.engine.world.chunks.event.OnChunkLoaded;
 import org.terasology.math.geom.Vector3i;
-import org.terasology.registry.In;
-import org.terasology.world.BlockEntityRegistry;
-import org.terasology.world.OnChangedBlock;
-import org.terasology.world.WorldProvider;
-import org.terasology.world.block.Block;
-import org.terasology.world.block.BlockManager;
-import org.terasology.world.block.family.BlockFamily;
-import org.terasology.world.block.items.OnBlockItemPlaced;
-import org.terasology.world.block.items.BlockItemComponent;
-import org.terasology.world.chunks.ChunkConstants;
-import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
-import org.terasology.world.chunks.blockdata.ExtraDataSystem;
-import org.terasology.world.chunks.blockdata.RegisterExtraData;
-import org.terasology.world.chunks.event.OnChunkLoaded;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 
 import static org.terasology.flowingliquids.world.block.LiquidData.getHeight;
-import static org.terasology.flowingliquids.world.block.LiquidData.setHeight;
 
 @RegisterSystem(RegisterMode.AUTHORITY)
 @ExtraDataSystem
 public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(LiquidFlowSystem.class);
-    
+    private static final float UPDATE_INTERVAL = 0.5f;
     private Random rand;
-    
     @In
     private WorldProvider worldProvider;
-    
     @In
     private BlockManager blockManager;
     private Block air;
-    
     @In
     private ExtraBlockDataManager extraDataManager;
     private int flowIx;
-    
     @In
     private PrefabManager prefabManager;
     private Prefab smooshingDamageType;
-    
     @In
     private BlockEntityRegistry blockEntityRegistry;
-
     private Map<Block, Map<BlockFamily, LiquidSmooshingReactionComponent>> smooshingReactions;
-    
     private Set<Vector3i> evenUpdatePositions;
     private Set<Vector3i> oddUpdatePositions;
     private Set<Vector3i> newEvenUpdatePositions;
     private Set<Vector3i> newOddUpdatePositions;
     private boolean evenTick;
     private float timeSinceUpdate;
-    private static final float UPDATE_INTERVAL = 0.5f;
-    
+
     @RegisterExtraData(name = LiquidData.EXTRA_DATA_NAME, bitSize = 8)
     public static boolean hasFlowData(Block block) {
         return block.isLiquid();
     }
-    
+
     @Override
     public void initialise() {
         evenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
@@ -105,7 +88,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         for (Prefab prefab : prefabManager.listPrefabs(LiquidSmooshingReactionComponent.class)) {
             LiquidSmooshingReactionComponent reaction = prefab.getComponent(LiquidSmooshingReactionComponent.class);
             if (blockManager.getBlock(reaction.liquid) == air || blockManager.getBlock(reaction.block) == air) {
-                // Possibly the module containing the required blocks isn't actually loaded, so the reaction can be safely ignored.
+                // Possibly the module containing the required blocks isn't actually loaded, so the reaction can be 
+                // safely ignored.
                 continue;
             }
             addReaction(reaction);
@@ -130,24 +114,23 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         }
         smooshingReactions.get(liquid).put(block, reaction);
     }
-    
+
     /**
-     * Called every time a block is changed.
-     * This means that the type of the block has changed.
+     * Called every time a block is changed. This means that the type of the block has changed.
      *
-     * @param event       The block change event
+     * @param event The block change event
      * @param blockEntity The entity of the block being changed
      */
     @ReceiveEvent
     public void blockUpdate(OnChangedBlock event, EntityRef blockEntity) {
         updateNear(event.getBlockPosition());
     }
-    
+
     /**
      * Called whenever a block is placed.
      *
-     * @param event          The block placed event
-     * @param blockEntity    The entity being placed
+     * @param event The block placed event
+     * @param blockEntity The entity being placed
      * @param blockComponent The block item component on the entity
      */
     @ReceiveEvent
@@ -157,11 +140,11 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             addPos(event.getPosition());
         }
     }
-    
+
     /**
      * Called every time a chunk is loaded.
      *
-     * @param event  The loading event
+     * @param event The loading event
      * @param entity The world entity sending the event
      */
     @ReceiveEvent
@@ -178,22 +161,22 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     @Override
     public void update(float delta) {
         randomUpdate();
         timeSinceUpdate += delta;
-        if (evenTick && evenUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
+        if (evenTick && evenUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL / 2) {
             evenTick = false;
             timeSinceUpdate = 0;
-            Set <Vector3i> temp = oddUpdatePositions;
+            Set<Vector3i> temp = oddUpdatePositions;
             oddUpdatePositions = newOddUpdatePositions;
             newOddUpdatePositions = temp;
         }
-        if (!evenTick && oddUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL/2) {
+        if (!evenTick && oddUpdatePositions.isEmpty() && timeSinceUpdate > UPDATE_INTERVAL / 2) {
             evenTick = true;
             timeSinceUpdate = 0;
-            Set <Vector3i> temp = evenUpdatePositions;
+            Set<Vector3i> temp = evenUpdatePositions;
             evenUpdatePositions = newEvenUpdatePositions;
             newEvenUpdatePositions = temp;
         }
@@ -209,19 +192,19 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                 int startHeight = 0;
                 Side startDirection = null;
                 int startRate = 0;
-                
+
                 if (blockType.isLiquid()) {
                     startHeight = getHeight(blockStatus);
                     startDirection = LiquidData.getDirection(blockStatus);
                     startRate = LiquidData.getRate(blockStatus);
                 }
-                
+
                 int height = startHeight;
                 height -= startRate;
                 if (height < 0) {
                     throw new IllegalStateException("Liquid outflow greater than existing volume.");
                 }
-                
+
                 //TODO: consider this in a varied order, but with top always first.
                 boolean smooshed = false;
                 for (Side side : Side.values()) {
@@ -232,7 +215,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         if (adjBlock == blockType) {
                             int rate = LiquidData.getRate(adjStatus);
                             if (rate + height > LiquidData.MAX_HEIGHT) {
-                                worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, LiquidData.MAX_HEIGHT - height));
+                                worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus,
+                                        LiquidData.MAX_HEIGHT - height));
                                 height = LiquidData.MAX_HEIGHT;
                                 addPos(adjPos);
                             } else {
@@ -242,18 +226,23 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             LiquidSmooshingReactionComponent reaction = getSmooshingReaction(adjBlock, blockType);
                             if (reaction == null || reaction.product == null) {
                                 if (blockType != air) {
-                                    blockEntityRegistry.getBlockEntityAt(pos).send(new DestroyEvent(EntityRef.NULL, EntityRef.NULL, smooshingDamageType));
+                                    blockEntityRegistry.getBlockEntityAt(pos).send(new DestroyEvent(EntityRef.NULL,
+                                            EntityRef.NULL, smooshingDamageType));
                                 }
-                                if (worldProvider.getBlock(pos) == air) { // Check the event didn't get cancelled or something.
+                                if (worldProvider.getBlock(pos) == air) { // Check the event didn't get cancelled or 
+                                    // something.
                                     blockType = adjBlock;
                                     worldProvider.setBlock(pos, adjBlock);
                                     height = LiquidData.getRate(adjStatus);
                                     smooshed = true;
                                 }
                             } else {
-                                float otherSufficiency = LiquidData.getRate(adjStatus) / (float) LiquidData.MAX_HEIGHT / reaction.liquidRequired;
-                                float thisSufficiency = blockType.isLiquid() ? height / (float) LiquidData.MAX_HEIGHT / reaction.otherLiquidRequired : 1f;
-                                // There's a much more efficient way of doing this without the loop, but this way is clearer.
+                                float otherSufficiency =
+                                        LiquidData.getRate(adjStatus) / (float) LiquidData.MAX_HEIGHT / reaction.liquidRequired;
+                                float thisSufficiency = blockType.isLiquid() ?
+                                        height / (float) LiquidData.MAX_HEIGHT / reaction.otherLiquidRequired : 1f;
+                                // There's a much more efficient way of doing this without the loop, but this way is 
+                                // clearer.
                                 boolean thisSufficient = false;
                                 boolean otherSufficient = false;
                                 while (!thisSufficient && !otherSufficient) {
@@ -263,7 +252,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
 
                                 if (thisSufficient && otherSufficient) {
                                     blockType = blockManager.getBlock(reaction.product);
-                                    if (otherSufficiency > 1 && rand.nextFloat() < 1/otherSufficiency) {
+                                    if (otherSufficiency > 1 && rand.nextFloat() < 1 / otherSufficiency) {
                                         worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
                                     }
                                     worldProvider.setBlock(pos, blockType);
@@ -275,7 +264,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                                     worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
                                     blockType = air;
                                     worldProvider.setBlock(pos, air);
-                                } // In the other case, thisSufficient && !otherSufficient, consume the liquid flowing in but not this block.
+                                } // In the other case, thisSufficient && !otherSufficient, consume the liquid 
+                                // flowing in but not this block.
                             }
                         } else {
                             worldProvider.setExtraData(flowIx, adjPos, LiquidData.setRate(adjStatus, 0));
@@ -283,8 +273,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         }
                     }
                 }
-                
-                if(height == 0) {
+
+                if (height == 0) {
                     if (blockType.isLiquid()) {
                         worldProvider.setBlock(pos, air);
                         worldProvider.setExtraData(flowIx, pos, 0);
@@ -296,11 +286,11 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                     }
                     continue;
                 }
-                
+
                 Side direction = null;
                 int rate = 0;
                 int maxRate = LiquidData.MAX_DOWN_RATE;
-                
+
                 Vector3i below = Side.BOTTOM.getAdjacentPos(pos);
                 Block belowBlock = worldProvider.getBlock(below);
                 if (canSmoosh(blockType, belowBlock)) {
@@ -346,7 +336,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                             lowestRate = adjRate;
                         }
                     }
-                    maxRate = height-lowestHeight+lowestRate;
+                    maxRate = height - lowestHeight + lowestRate;
                     rate = maxRate - 1;
                     if (maxRate > LiquidData.MAX_RATE) {
                         maxRate = LiquidData.MAX_RATE;
@@ -364,14 +354,14 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                 } else if (rate < 0) {
                     rate = 0;
                 }
-                
+
                 byte newStatus = LiquidData.setRate(
-                    LiquidData.setDirection(
-                        LiquidData.setHeight(
-                            blockStatus,
-                            height),
-                        direction),
-                    rate);
+                        LiquidData.setDirection(
+                                LiquidData.setHeight(
+                                        blockStatus,
+                                        height),
+                                direction),
+                        rate);
                 if (newStatus != blockStatus || smooshed) {
                     worldProvider.setExtraData(flowIx, pos, newStatus);
                     updateNear(pos);
@@ -389,14 +379,14 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     /**
-     * Set random liquid blocks in motion in every loaded chunk,
-     * to spread out piles of liquid and hopefully trigger cascades.
+     * Set random liquid blocks in motion in every loaded chunk, to spread out piles of liquid and hopefully trigger
+     * cascades.
      */
     private void randomUpdate() {
         for (Region3i region : worldProvider.getRelevantRegions()) {
-            for (int i=0; i<10; i++) {
+            for (int i = 0; i < 10; i++) {
                 int x = region.minX() + rand.nextInt(region.sizeX());
                 int y = region.minY() + rand.nextInt(region.sizeY());
                 int z = region.minZ() + rand.nextInt(region.sizeZ());
@@ -411,7 +401,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         Side direction = Side.horizontalSides().get(rand.nextInt(4));
                         Vector3i adjPos = direction.getAdjacentPos(pos);
                         Block adjBlock = worldProvider.getBlock(adjPos);
-                        if (adjBlock == block && getHeight((byte)worldProvider.getExtraData(flowIx, adjPos)) < getHeight(status) || canSmoosh(block, adjBlock)) {
+                        if (adjBlock == block && getHeight((byte) worldProvider.getExtraData(flowIx, adjPos)) < getHeight(status) || canSmoosh(block, adjBlock)) {
                             worldProvider.setExtraData(flowIx, pos, LiquidData.setDirection(status, direction));
                             doAddPos(pos);
                             doAddPos(adjPos);
@@ -421,11 +411,11 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     /**
      * Can the liquid flow replace the block
      *
-     * @param liquid    The liquid flowing
+     * @param liquid The liquid flowing
      * @param replacing The block the liquid is replacing
      * @return True if it can, false otherwise
      */
@@ -443,7 +433,8 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      * Get the details of the interaction when these blocks meet, or null for the default reaction.
      */
     private LiquidSmooshingReactionComponent getSmooshingReaction(Block liquid, Block replacing) {
-        return smooshingReactions.containsKey(liquid) ? smooshingReactions.get(liquid).get(replacing.getBlockFamily()) : null;
+        return smooshingReactions.containsKey(liquid) ?
+                smooshingReactions.get(liquid).get(replacing.getBlockFamily()) : null;
     }
 
     /**
@@ -451,18 +442,18 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      *
      * @param pos The position to add
      */
-    private void addPos(Vector3i pos){
+    private void addPos(Vector3i pos) {
         if (worldProvider.getBlock(pos).isLiquid()) {
             doAddPos(pos);
         }
     }
-    
+
     /**
      * Add a position to be checked, even if it isn't occupied by liquid.
      *
      * @param pos The position to add
      */
-    private void doAddPos(Vector3i pos){
+    private void doAddPos(Vector3i pos) {
         if (worldProvider.isBlockRelevant(pos)) {
             if ((pos.x() + pos.y() + pos.z()) % 2 == 0) {
                 newEvenUpdatePositions.add(pos);
@@ -471,7 +462,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     /**
      * Notify a block and its neighbours of an update.
      *
