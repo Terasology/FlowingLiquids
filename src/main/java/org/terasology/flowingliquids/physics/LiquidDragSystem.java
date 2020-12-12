@@ -30,6 +30,7 @@ import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
 import org.terasology.logic.characters.CharacterMovementComponent;
 import org.terasology.logic.characters.CharacterImpulseEvent;
 import org.terasology.logic.location.LocationComponent;
+import org.terasology.math.JomlUtil;
 import org.terasology.math.Region3i;
 import org.terasology.math.Side;
 import org.terasology.math.geom.Vector3i;
@@ -89,7 +90,7 @@ public class LiquidDragSystem extends BaseComponentSystem implements UpdateSubsc
                 }
             }
             force.mul(delta*0.4f/numSamples);
-            entity.send(new CharacterImpulseEvent(force));
+            entity.send(new CharacterImpulseEvent(JomlUtil.from(force)));
         }
     }
 }
