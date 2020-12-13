@@ -30,6 +30,7 @@ import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
 import org.terasology.entitySystem.systems.UpdateSubscriberSystem;
 import org.terasology.logic.health.DestroyEvent;
+import org.terasology.math.JomlUtil;
 import org.terasology.math.Region3i;
 import org.terasology.math.Side;
 import org.terasology.math.geom.Vector3i;
@@ -140,7 +141,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      */
     @ReceiveEvent
     public void blockUpdate(OnChangedBlock event, EntityRef blockEntity) {
-        updateNear(event.getBlockPosition());
+        updateNear(JomlUtil.from(event.getBlockPosition()));
     }
     
     /**
