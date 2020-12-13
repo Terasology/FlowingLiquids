@@ -40,6 +40,7 @@ import org.terasology.world.OnChangedBlock;
 import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
+import org.terasology.world.block.BlockRegion;
 import org.terasology.world.block.family.BlockFamily;
 import org.terasology.world.block.items.OnBlockItemPlaced;
 import org.terasology.world.block.items.BlockItemComponent;
@@ -396,11 +397,11 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      * to spread out piles of liquid and hopefully trigger cascades.
      */
     private void randomUpdate() {
-        for (Region3i region : worldProvider.getRelevantRegions()) {
+        for (BlockRegion region : worldProvider.getRelevantRegions()) {
             for (int i=0; i<10; i++) {
-                int x = region.minX() + rand.nextInt(region.sizeX());
-                int y = region.minY() + rand.nextInt(region.sizeY());
-                int z = region.minZ() + rand.nextInt(region.sizeZ());
+                int x = region.getMinX() + rand.nextInt(region.getSizeX());
+                int y = region.getMinY() + rand.nextInt(region.getSizeY());
+                int z = region.getMinZ() + rand.nextInt(region.getSizeZ());
                 if (((x + y + z) % 2 == 0) != evenTick) {
                     z += 1;
                 }
