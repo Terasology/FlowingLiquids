@@ -86,7 +86,7 @@ public class LiquidDragSystem extends BaseComponentSystem implements UpdateSubsc
                 }
             }
             force.mul(delta * 0.4f / numSamples);
-            entity.send(new CharacterImpulseEvent(force));
+            entity.send(new CharacterImpulseEvent(JomlUtil.from(force)));
         }
     }
 }
