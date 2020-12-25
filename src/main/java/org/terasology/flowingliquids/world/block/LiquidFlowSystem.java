@@ -399,9 +399,9 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private void randomUpdate() {
         for (BlockRegion region : worldProvider.getRelevantRegions()) {
             for (int i=0; i<10; i++) {
-                int x = region.getMinX() + rand.nextInt(region.getSizeX());
-                int y = region.getMinY() + rand.nextInt(region.getSizeY());
-                int z = region.getMinZ() + rand.nextInt(region.getSizeZ());
+                int x = region.minX() + rand.nextInt(region.getSizeX());
+                int y = region.minY() + rand.nextInt(region.getSizeY());
+                int z = region.minZ() + rand.nextInt(region.getSizeZ());
                 if (((x + y + z) % 2 == 0) != evenTick) {
                     z += 1;
                 }
