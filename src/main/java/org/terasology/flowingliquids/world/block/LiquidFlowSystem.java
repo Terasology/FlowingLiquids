@@ -56,31 +56,31 @@ import static org.terasology.flowingliquids.world.block.LiquidData.setHeight;
 @RegisterSystem(RegisterMode.AUTHORITY)
 @ExtraDataSystem
 public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubscriberSystem {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(LiquidFlowSystem.class);
-    
+
     private Random rand;
-    
+
     @In
     private WorldProvider worldProvider;
-    
+
     @In
     private BlockManager blockManager;
     private Block air;
-    
+
     @In
     private ExtraBlockDataManager extraDataManager;
     private int flowIx;
-    
+
     @In
     private PrefabManager prefabManager;
     private Prefab smooshingDamageType;
-    
+
     @In
     private BlockEntityRegistry blockEntityRegistry;
 
     private Map<Block, Map<BlockFamily, LiquidSmooshingReactionComponent>> smooshingReactions;
-    
+
     private Set<Vector3i> evenUpdatePositions;
     private Set<Vector3i> oddUpdatePositions;
     private Set<Vector3i> newEvenUpdatePositions;
@@ -88,12 +88,12 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     private boolean evenTick;
     private float timeSinceUpdate;
     private static final float UPDATE_INTERVAL = 0.5f;
-    
+
     @RegisterExtraData(name = LiquidData.EXTRA_DATA_NAME, bitSize = 8)
     public static boolean hasFlowData(Block block) {
         return block.isLiquid();
     }
-    
+
     @Override
     public void initialise() {
         evenUpdatePositions = Collections.synchronizedSet(new LinkedHashSet());
@@ -132,7 +132,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
         }
         smooshingReactions.get(liquid).put(block, reaction);
     }
-    
+
     /**
      * Called every time a block is changed.
      * This means that the type of the block has changed.
@@ -144,7 +144,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     public void blockUpdate(OnChangedBlock event, EntityRef blockEntity) {
         updateNear(JomlUtil.from(event.getBlockPosition()));
     }
-    
+
     /**
      * Called whenever a block is placed.
      *
@@ -155,11 +155,11 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
     @ReceiveEvent
     public void liquidPlaced(OnBlockItemPlaced event, EntityRef blockEntity, BlockItemComponent blockComponent) {
         if (blockComponent.blockFamily.getArchetypeBlock().isLiquid()) {
-            worldProvider.setExtraData(flowIx, event.getPosition(), LiquidData.FULL);
-            addPos(event.getPosition());
+            worldProvider.setExtraData(flowIx, JomlUtil.from(event.getPosition()), LiquidData.FULL);
+            addPos(JomlUtil.from(event.getPosition()));
         }
     }
-    
+
     /**
      * Called every time a chunk is loaded.
      *
@@ -180,7 +180,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     @Override
     public void update(float delta) {
         randomUpdate();
@@ -211,19 +211,19 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                 int startHeight = 0;
                 Side startDirection = null;
                 int startRate = 0;
-                
+
                 if (blockType.isLiquid()) {
                     startHeight = getHeight(blockStatus);
                     startDirection = LiquidData.getDirection(blockStatus);
                     startRate = LiquidData.getRate(blockStatus);
                 }
-                
+
                 int height = startHeight;
                 height -= startRate;
                 if (height < 0) {
                     throw new IllegalStateException("Liquid outflow greater than existing volume.");
                 }
-                
+
                 //TODO: consider this in a varied order, but with top always first.
                 boolean smooshed = false;
                 for (Side side : Side.values()) {
@@ -285,7 +285,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                         }
                     }
                 }
-                
+
                 if(height == 0) {
                     if (blockType.isLiquid()) {
                         worldProvider.setBlock(pos, air);
@@ -298,11 +298,11 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                     }
                     continue;
                 }
-                
+
                 Side direction = null;
                 int rate = 0;
                 int maxRate = LiquidData.MAX_DOWN_RATE;
-                
+
                 Vector3i below = Side.BOTTOM.getAdjacentPos(pos);
                 Block belowBlock = worldProvider.getBlock(below);
                 if (canSmoosh(blockType, belowBlock)) {
@@ -366,7 +366,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
                 } else if (rate < 0) {
                     rate = 0;
                 }
-                
+
                 byte newStatus = LiquidData.setRate(
                     LiquidData.setDirection(
                         LiquidData.setHeight(
@@ -391,7 +391,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     /**
      * Set random liquid blocks in motion in every loaded chunk,
      * to spread out piles of liquid and hopefully trigger cascades.
@@ -423,7 +423,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     /**
      * Can the liquid flow replace the block
      *
@@ -458,7 +458,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             doAddPos(pos);
         }
     }
-    
+
     /**
      * Add a position to be checked, even if it isn't occupied by liquid.
      *
@@ -473,7 +473,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
             }
         }
     }
-    
+
     /**
      * Notify a block and its neighbours of an update.
      *
