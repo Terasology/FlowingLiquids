@@ -45,6 +45,7 @@ import org.terasology.world.block.family.BlockFamily;
 import org.terasology.world.block.items.OnBlockItemPlaced;
 import org.terasology.world.block.items.BlockItemComponent;
 import org.terasology.world.chunks.ChunkConstants;
+import org.terasology.world.chunks.Chunks;
 import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
 import org.terasology.world.chunks.blockdata.ExtraDataSystem;
 import org.terasology.world.chunks.blockdata.RegisterExtraData;
@@ -168,13 +169,12 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      */
     @ReceiveEvent
     public void onChunkLoaded(OnChunkLoaded event, EntityRef entity) {
-        Vector3i chunkPos = new Vector3i(event.getChunkPos());
-        chunkPos.mul(ChunkConstants.SIZE_X, ChunkConstants.SIZE_Y, ChunkConstants.SIZE_Z);
-        for (int x = -1; x < ChunkConstants.SIZE_X + 1; x++) {
-            for (int y = -1; y < ChunkConstants.SIZE_Y + 1; y++) {
-                for (int z = -1; z < ChunkConstants.SIZE_Z + 1; z++) {
-                    Vector3i pos = new Vector3i(chunkPos);
-                    pos.add(x, y, z);
+        org.joml.Vector3i chunkPos = new org.joml.Vector3i(event.getChunkPos());
+        chunkPos.mul(Chunks.SIZE_X, Chunks.SIZE_Y, Chunks.SIZE_Z);
+        for (int x = -1; x < Chunks.SIZE_X + 1; x++) {
+            for (int y = -1; y < Chunks.SIZE_Y + 1; y++) {
+                for (int z = -1; z < Chunks.SIZE_Z + 1; z++) {
+                    Vector3i pos = JomlUtil.from(chunkPos).add(x, y, z);
                     addPos(pos);
                 }
             }
