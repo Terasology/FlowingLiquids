@@ -76,14 +76,14 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             renderType = ChunkMesh.RenderType.WATER_AND_ICE;
         }
 
-        Vector3i pos = new Vector3i(x,y,z);
+        org.joml.Vector3i pos = new org.joml.Vector3i(x,y,z);
         float[] renderHeight = getRenderHeight(view, pos);
         boolean suppressed = view.getBlock(pos.x, pos.y+1, pos.z) == block; // Render it as full even though it actually isn't.
         boolean full = suppressed || isFull(renderHeight);
         
         BlockAppearance appearance = block.getAppearance(null); //TODO: collect information the block wants, or avoid this entirely.
         for(Side side : Side.values()) {
-            Vector3i adjacentPos = side.getAdjacentPos(pos);
+            org.joml.Vector3i adjacentPos = side.getAdjacentPos(pos, new org.joml.Vector3i());
             Block adjacentBlock = view.getBlock(adjacentPos);
             boolean adjacentSuppressed = view.getBlock(adjacentPos.x, adjacentPos.y+1, adjacentPos.z) == block;
             if(isSideVisibleForBlockTypes(adjacentBlock, adjacentSuppressed, block, full, suppressed, side)) {
@@ -96,13 +96,13 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
     }
     
     // The height of the liquid block, as it is displayed.
-    private float[] getRenderHeight(ChunkView view, Vector3i pos) {
+    private float[] getRenderHeight(ChunkView view, org.joml.Vector3ic pos) {
         float[] heights = new float[4];
         int[] liquidCount = new int[4];
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
-                if (view.getBlock(pos.x+x, pos.y, pos.z+z) == block && view.getBlock(pos.x+x, pos.y+1, pos.z+z) != block) {
-                    int height = LiquidData.getHeight((byte)view.getExtraData(flowIx, pos.x+x, pos.y, pos.z+z));
+                if (view.getBlock(pos.x() + x, pos.y(), pos.z() + z) == block && view.getBlock(pos.x() + x, pos.y() + 1, pos.z() + z) != block) {
+                    int height = LiquidData.getHeight((byte) view.getExtraData(flowIx, pos.x() + x, pos.y(), pos.z() + z));
                     for (int i = 0; i < 4; i++) {
                         if (((i < 2) ? (x <= 0) : (x >= 0)) && ((i % 2 == 0) ? (z <= 0) : (z >= 0))) {
                             liquidCount[i]++;
