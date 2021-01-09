@@ -68,13 +68,13 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     
     @Override
     public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
-        Vector3i pos = new Vector3i(x,y,z);
-        int fluidHeight = LiquidData.getHeight((byte)view.getExtraData(flowIx, pos));
+        org.joml.Vector3i pos = new org.joml.Vector3i(x, y, z);
+        int fluidHeight = LiquidData.getHeight((byte) view.getExtraData(flowIx, pos));
         BlockAppearance appearance = block.getAppearance(null); //I know it's DebugLiquid, which doesn't vary its appearance.
-        for(Side side : Side.values()) {
-            if(isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos)), block, side)) {
+        for (Side side : Side.values()) {
+            if (isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos, new org.joml.Vector3i())), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
-                BlockMeshPart labelledPart = basePart.mapTexCoords(JomlUtil.from(textureOffsets[fluidHeight]), texCoordScale,1);
+                BlockMeshPart labelledPart = basePart.mapTexCoords(JomlUtil.from(textureOffsets[fluidHeight]), texCoordScale, 1);
                 labelledPart.appendTo(chunkMesh, x, y, z, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
             }
         }
