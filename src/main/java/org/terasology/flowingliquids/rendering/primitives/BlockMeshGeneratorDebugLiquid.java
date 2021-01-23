@@ -16,15 +16,13 @@
 
 package org.terasology.flowingliquids.rendering.primitives;
 
+import org.joml.Vector2f;
+import org.joml.Vector4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terasology.assets.ResourceUrn;
 import org.terasology.flowingliquids.world.block.LiquidData;
-import org.terasology.math.JomlUtil;
 import org.terasology.math.Side;
-import org.terasology.math.geom.Vector2f;
-import org.terasology.math.geom.Vector3i;
-import org.terasology.math.geom.Vector4f;
 import org.terasology.rendering.assets.mesh.Mesh;
 import org.terasology.rendering.primitives.BlockMeshGenerator;
 import org.terasology.rendering.primitives.ChunkMesh;
@@ -44,28 +42,25 @@ import org.terasology.world.block.tiles.WorldAtlas;
  */
 public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
     private static final Logger logger = LoggerFactory.getLogger(BlockMeshGeneratorDebugLiquid.class);
-    
-    private Block block;
+    private static final float TEX_COORD_SCALE = 1 / (1 - 2 / 128f); //Compensates for the default calculations in mapTexCoords.
+
     private Mesh mesh;
-    
-    private int flowIx;
-    
-    private static Vector4f colourOffset = new Vector4f(1,1,1,1);
-    private static final float texCoordScale = 1/(1-2/128f); //Compensates for the default calculations in mapTexCoords.
-    private Vector2f[] textureOffsets;
-    
+    private final Block block;
+    private final int flowIx;
+    private final Vector2f[] textureOffsets;
+
     public BlockMeshGeneratorDebugLiquid(Block block, WorldAtlas worldAtlas, int flowIx) {
         this.block = block;
         this.flowIx = flowIx;
         textureOffsets = new Vector2f[17];
         ResourceUrn baseTile = new ResourceUrn("FlowingLiquids:DebugLiquid1");
-        Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).scale(-1).add(new Vector2f(-texCoordScale/128, -texCoordScale/128));
-        for(int i=1; i<=LiquidData.MAX_HEIGHT; i++){
-            ResourceUrn tile = new ResourceUrn("FlowingLiquids:DebugLiquid"+i);
+        Vector2f baseOffset = worldAtlas.getTexCoords(baseTile, true).mul(-1).add(-TEX_COORD_SCALE / 128, -TEX_COORD_SCALE / 128);
+        for (int i = 1; i <= LiquidData.MAX_HEIGHT; i++) {
+            ResourceUrn tile = new ResourceUrn("FlowingLiquids:DebugLiquid" + i);
             textureOffsets[i] = worldAtlas.getTexCoords(tile, true).add(baseOffset);
         }
     }
-    
+
     @Override
     public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
         org.joml.Vector3i pos = new org.joml.Vector3i(x, y, z);
@@ -74,15 +69,15 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
         for (Side side : Side.values()) {
             if (isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos, new org.joml.Vector3i())), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
-                BlockMeshPart labelledPart = basePart.mapTexCoords(JomlUtil.from(textureOffsets[fluidHeight]), texCoordScale, 1);
+                BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], TEX_COORD_SCALE, 1);
                 labelledPart.appendTo(chunkMesh, x, y, z, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
             }
         }
     }
-    
+
     private boolean isSideVisibleForBlockTypes(Block blockToCheck, Block currentBlock, Side side) {
         return currentBlock.isWaving() != blockToCheck.isWaving() || blockToCheck.getMeshGenerator() == null
-                || !blockToCheck.isFullSide(side.reverse()) || (!currentBlock.isTranslucent() && blockToCheck.isTranslucent());
+            || !blockToCheck.isFullSide(side.reverse()) || (!currentBlock.isTranslucent() && blockToCheck.isTranslucent());
     }
 
     @Override
