@@ -17,6 +17,7 @@
 package org.terasology.flowingliquids.rendering.primitives;
 
 import org.joml.Vector2f;
+import org.joml.Vector3i;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,11 +64,11 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
 
     @Override
     public void generateChunkMesh(ChunkView view, ChunkMesh chunkMesh, int x, int y, int z) {
-        org.joml.Vector3i pos = new org.joml.Vector3i(x, y, z);
+        Vector3i pos = new Vector3i(x, y, z);
         int fluidHeight = LiquidData.getHeight((byte) view.getExtraData(flowIx, pos));
         BlockAppearance appearance = block.getAppearance(null); //I know it's DebugLiquid, which doesn't vary its appearance.
         for (Side side : Side.values()) {
-            if (isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos, new org.joml.Vector3i())), block, side)) {
+            if (isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos, new Vector3i())), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], TEX_COORD_SCALE, 1);
                 labelledPart.appendTo(chunkMesh, x, y, z, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
