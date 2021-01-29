@@ -24,7 +24,6 @@ import org.terasology.math.JomlUtil;
 import org.terasology.math.Side;
 import org.terasology.math.geom.Vector2f;
 import org.terasology.math.geom.Vector3f;
-import org.terasology.math.geom.Vector3i;
 import org.terasology.rendering.assets.mesh.Mesh;
 import org.terasology.rendering.primitives.BlockMeshGenerator;
 import org.terasology.rendering.primitives.ChunkMesh;
