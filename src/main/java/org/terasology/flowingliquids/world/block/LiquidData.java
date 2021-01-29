@@ -1,18 +1,5 @@
-/*
- * Copyright 2018 MovingBlocks
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2020 The Terasology Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.flowingliquids.world.block;
 
@@ -27,7 +14,7 @@ public class LiquidData {
     public static final int MAX_DOWN_RATE = 4;
     public static final byte FULL = (byte) 0b0_000_0000;
     public static final String EXTRA_DATA_NAME = "flowingLiquids.flow";
-    
+
     /**
      * Extracts the amount of liquid in the block from a byte of liquid data.
      * @param status The packed liquid data
@@ -36,17 +23,18 @@ public class LiquidData {
     public static int getHeight(byte status){
         return (int) MAX_HEIGHT - (status & 0b0_000_1111);
     }
-    
+
     /**
      * Replaces the height in a byte of liquid data with a different height.
      * @param status The byte to modify
      * @param height The height to store
      * @return The modified byte
      */
-    public static byte setHeight(byte status, int height){
-        if (height < 1 || height > MAX_HEIGHT)
-            throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to "+MAX_HEIGHT+".");
-        return (byte) ((status & ~0b0_000_1111) | (MAX_HEIGHT-height));
+    public static byte setHeight(byte status, int height) {
+        if (height < 1 || height > MAX_HEIGHT) {
+            throw new IllegalArgumentException("Liquid heights are constrained to the range 1 to " + MAX_HEIGHT + ".");
+        }
+        return (byte) ((status & ~0b0_000_1111) | (MAX_HEIGHT - height));
     }
 
     /**
@@ -64,7 +52,7 @@ public class LiquidData {
             return Side.BOTTOM;
         }
     }
-    
+
     /**
      * Replaces the flow direction in a byte of liquid data with a different direction, and resets the rate to 1 or 0.
      * @param status The byte to modify
@@ -75,7 +63,7 @@ public class LiquidData {
         int sideData = side == null ? 0 : side.ordinal()+1;
         return (byte) ((status & ~0b1_111_0000) | (sideData << 4));
     }
-    
+
     /**
      * Extracts the flow rate from a byte of liquid data.
      * @param status The packed liquid data
@@ -92,11 +80,11 @@ public class LiquidData {
             return rateData + 3;
         }
     }
-    
+
     /**
      * Replaces the flow rate in a byte of liquid data with a different rate.
      * @param status The byte to modify
-     * @param side The rate to store
+     * @param rate The rate to store
      * @return The modified byte
      */
     public static byte setRate(byte status, int rate) {
@@ -115,7 +103,7 @@ public class LiquidData {
             throw new IllegalArgumentException("Liquid rates are constrained to the range 0 to 2 (or 4 for downwards). Was "+rate);
         }
     }
-    
+
     /**
      * Extracts the 3 bits relevant to flow direction from a byte of liquid data.
      * @param status The packed liquid data
