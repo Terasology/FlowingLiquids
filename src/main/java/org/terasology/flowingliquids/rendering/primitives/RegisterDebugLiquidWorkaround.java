@@ -16,14 +16,11 @@
 
 package org.terasology.flowingliquids.rendering.primitives;
 
-import org.terasology.registry.In;
 import org.terasology.entitySystem.systems.BaseComponentSystem;
-import org.terasology.entitySystem.systems.RegisterSystem;
 import org.terasology.entitySystem.systems.RegisterMode;
-import org.terasology.world.block.Block;
+import org.terasology.entitySystem.systems.RegisterSystem;
+import org.terasology.registry.In;
 import org.terasology.world.block.BlockManager;
-import org.terasology.world.block.tiles.WorldAtlas;
-import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
 
 /**
  * Workaround for issue #3491. Triggers registration of debugLiquid on headless

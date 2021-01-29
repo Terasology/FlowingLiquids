@@ -18,7 +18,6 @@ package org.terasology.flowingliquids.rendering.primitives;
 
 import org.joml.Vector2f;
 import org.joml.Vector3i;
-import org.joml.Vector4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terasology.assets.ResourceUrn;
