@@ -5,6 +5,8 @@ package org.terasology.flowingliquids.rendering.primitives;
 
 import org.joml.Vector2f;
 import org.joml.Vector3f;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terasology.assets.ResourceUrn;
@@ -59,14 +61,14 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             renderType = ChunkMesh.RenderType.WATER_AND_ICE;
         }
 
-        org.joml.Vector3i pos = new org.joml.Vector3i(x, y, z);
+        Vector3i pos = new Vector3i(x, y, z);
         float[] renderHeight = getRenderHeight(view, pos);
         boolean suppressed = view.getBlock(pos.x, pos.y + 1, pos.z) == block; // Render it as full even though it actually isn't.
         boolean full = suppressed || isFull(renderHeight);
 
         BlockAppearance appearance = block.getAppearance(null); //TODO: collect information the block wants, or avoid this entirely.
         for (Side side : Side.values()) {
-            org.joml.Vector3i adjacentPos = side.getAdjacentPos(pos, new org.joml.Vector3i());
+            Vector3i adjacentPos = side.getAdjacentPos(pos, new Vector3i());
             Block adjacentBlock = view.getBlock(adjacentPos);
             boolean adjacentSuppressed = view.getBlock(adjacentPos.x, adjacentPos.y + 1, adjacentPos.z) == block;
             if (isSideVisibleForBlockTypes(adjacentBlock, adjacentSuppressed, block, full, suppressed, side)) {
@@ -79,7 +81,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
     }
 
     // The height of the liquid block, as it is displayed.
-    private float[] getRenderHeight(ChunkView view, org.joml.Vector3ic pos) {
+    private float[] getRenderHeight(ChunkView view, Vector3ic pos) {
         float[] heights = new float[4];
         int[] liquidCount = new int[4];
         for (int x = -1; x <= 1; x++) {
@@ -116,9 +118,9 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
         Vector2f[] texCoords = new Vector2f[basePart.size()];
         int[] indices = new int[basePart.indicesSize()];
         for (int i = 0; i < basePart.size(); i++) {
-            vertices[i] = basePart.getVertex(i);
-            normals[i] = basePart.getNormal(i);
-            texCoords[i] = basePart.getTexCoord(i);
+            vertices[i]  = new Vector3f(basePart.getVertex(i));
+            normals[i]   = new Vector3f(basePart.getNormal(i));
+            texCoords[i] = new Vector2f(basePart.getTexCoord(i));
         }
         for (int i = 0; i < basePart.indicesSize(); i++) {
             indices[i] = basePart.getIndex(i);
@@ -146,6 +148,8 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             return true;
         } else if (blockToCheck == currentBlock) {
             return (side != Side.BOTTOM && side != Side.TOP && suppressed && !adjacentSuppressed);
+        } else if (blockToCheck.getURI().toString().equals("engine:unloaded")) {
+            return false;
         } else {
             return currentBlock.isWaving() != blockToCheck.isWaving()
                 || blockToCheck.getMeshGenerator() == null
