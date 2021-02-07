@@ -24,6 +24,7 @@ import org.terasology.world.WorldProvider;
 import org.terasology.world.block.Block;
 import org.terasology.world.block.BlockManager;
 import org.terasology.world.block.BlockRegion;
+import org.terasology.world.block.BlockRegionc;
 import org.terasology.world.block.family.BlockFamily;
 import org.terasology.world.block.items.BlockItemComponent;
 import org.terasology.world.block.items.OnBlockItemPlaced;
@@ -385,7 +386,7 @@ public class LiquidFlowSystem extends BaseComponentSystem implements UpdateSubsc
      * cascades.
      */
     private void randomUpdate() {
-        for (BlockRegion region : worldProvider.getRelevantRegions()) {
+        for (BlockRegionc region : worldProvider.getRelevantRegions()) {
             for (int i = 0; i < 10; i++) {
                 int x = region.minX() + rand.nextInt(region.getSizeX());
                 int y = region.minY() + rand.nextInt(region.getSizeY());
