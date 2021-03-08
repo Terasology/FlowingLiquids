@@ -10,19 +10,19 @@ import org.joml.Vector3ic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terasology.assets.ResourceUrn;
+import org.terasology.engine.math.Side;
+import org.terasology.engine.rendering.assets.mesh.Mesh;
+import org.terasology.engine.rendering.primitives.BlockMeshGenerator;
+import org.terasology.engine.rendering.primitives.ChunkMesh;
+import org.terasology.engine.rendering.primitives.ChunkVertexFlag;
+import org.terasology.engine.rendering.primitives.Tessellator;
+import org.terasology.engine.world.ChunkView;
+import org.terasology.engine.world.block.Block;
+import org.terasology.engine.world.block.BlockAppearance;
+import org.terasology.engine.world.block.BlockPart;
+import org.terasology.engine.world.block.shapes.BlockMeshPart;
+import org.terasology.engine.world.block.tiles.WorldAtlas;
 import org.terasology.flowingliquids.world.block.LiquidData;
-import org.terasology.math.Side;
-import org.terasology.rendering.assets.mesh.Mesh;
-import org.terasology.rendering.primitives.BlockMeshGenerator;
-import org.terasology.rendering.primitives.ChunkMesh;
-import org.terasology.rendering.primitives.ChunkVertexFlag;
-import org.terasology.rendering.primitives.Tessellator;
-import org.terasology.world.ChunkView;
-import org.terasology.world.block.Block;
-import org.terasology.world.block.BlockAppearance;
-import org.terasology.world.block.BlockPart;
-import org.terasology.world.block.shapes.BlockMeshPart;
-import org.terasology.world.block.tiles.WorldAtlas;
 
 /**
  * As the default block mesh generator does not allow the mesh to depend on

@@ -3,7 +3,7 @@
 
 package org.terasology.flowingliquids.world.block;
 
-import org.terasology.math.Side;
+import org.terasology.engine.math.Side;
 
 /**
  * Utility class for encoding and decoding liquid data.

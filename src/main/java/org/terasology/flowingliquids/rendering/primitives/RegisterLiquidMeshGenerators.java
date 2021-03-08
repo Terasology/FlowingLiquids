@@ -3,15 +3,15 @@
 
 package org.terasology.flowingliquids.rendering.primitives;
 
-import org.terasology.entitySystem.systems.BaseComponentSystem;
-import org.terasology.entitySystem.systems.RegisterMode;
-import org.terasology.entitySystem.systems.RegisterSystem;
-import org.terasology.math.Side;
-import org.terasology.registry.In;
-import org.terasology.world.block.Block;
-import org.terasology.world.block.BlockManager;
-import org.terasology.world.block.tiles.WorldAtlas;
-import org.terasology.world.chunks.blockdata.ExtraBlockDataManager;
+import org.terasology.engine.entitySystem.systems.BaseComponentSystem;
+import org.terasology.engine.entitySystem.systems.RegisterMode;
+import org.terasology.engine.entitySystem.systems.RegisterSystem;
+import org.terasology.engine.math.Side;
+import org.terasology.engine.registry.In;
+import org.terasology.engine.world.block.Block;
+import org.terasology.engine.world.block.BlockManager;
+import org.terasology.engine.world.block.tiles.WorldAtlas;
+import org.terasology.engine.world.chunks.blockdata.ExtraBlockDataManager;
 
 @RegisterSystem(RegisterMode.CLIENT)
 public class RegisterLiquidMeshGenerators extends BaseComponentSystem {

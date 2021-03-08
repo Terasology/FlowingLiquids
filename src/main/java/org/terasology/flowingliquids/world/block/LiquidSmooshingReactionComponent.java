@@ -3,7 +3,7 @@
 
 package org.terasology.flowingliquids.world.block;
 
-import org.terasology.entitySystem.Component;
+import org.terasology.engine.entitySystem.Component;
 
 /**
  * Specifies that a liquid is able to flow into and destroy a particular block,
