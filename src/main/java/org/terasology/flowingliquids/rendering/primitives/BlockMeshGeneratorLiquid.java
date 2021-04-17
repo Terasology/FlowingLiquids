@@ -75,7 +75,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
 //                Vector4f colorOffset = block.calcColorOffsetFor(BlockPart.fromSide(side), biome);
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart loweredPart = lowerPart(side, basePart, renderHeight, suppressed, adjacentBlock == block);
-                loweredPart.appendTo(chunkMesh, x, y, z, renderType, vertexFlag);
+                loweredPart.appendTo(chunkMesh, view, x, y, z, renderType, vertexFlag);
             }
         }
     }
