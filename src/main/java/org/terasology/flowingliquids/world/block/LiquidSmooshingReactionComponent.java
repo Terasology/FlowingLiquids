@@ -1,15 +1,15 @@
-// Copyright 2020 The Terasology Foundation
+// Copyright 2021 The Terasology Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.flowingliquids.world.block;
 
-import org.terasology.engine.entitySystem.Component;
+import org.terasology.gestalt.entitysystem.component.Component;
 
 /**
  * Specifies that a liquid is able to flow into and destroy a particular block,
  * and optionally create a different block in the process.
  */
-public class LiquidSmooshingReactionComponent implements Component {
+public class LiquidSmooshingReactionComponent implements Component<LiquidSmooshingReactionComponent> {
     public String liquid;
 
     /** The block that gets smooshed */
@@ -26,4 +26,14 @@ public class LiquidSmooshingReactionComponent implements Component {
 
     /** If the block that is smooshed is also a liquid, whether the reverse reaction (`block` flowing into `liquid`) is also possible. */
     public boolean reversible;
+
+    @Override
+    public void copy(LiquidSmooshingReactionComponent other) {
+        this.liquid = other.liquid;
+        this.block = other.block;
+        this.product = other.product;
+        this.liquidRequired = other.liquidRequired;
+        this.otherLiquidRequired = other.otherLiquidRequired;
+        this.reversible = other.reversible;
+    }
 }
