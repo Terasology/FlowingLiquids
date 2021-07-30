@@ -21,6 +21,7 @@ import org.terasology.engine.world.block.BlockPart;
 import org.terasology.engine.world.block.shapes.BlockMeshPart;
 import org.terasology.engine.world.block.tiles.WorldAtlas;
 import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.nui.Color;
 
 /**
  * As the default block mesh generator does not allow the mesh to depend on
@@ -57,7 +58,7 @@ public class BlockMeshGeneratorDebugLiquid implements BlockMeshGenerator {
             if (isSideVisibleForBlockTypes(view.getBlock(side.getAdjacentPos(pos, new Vector3i())), block, side)) {
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart labelledPart = basePart.mapTexCoords(textureOffsets[fluidHeight], TEX_COORD_SCALE, 1);
-                labelledPart.appendTo(chunkMesh, view, x, y, z, ChunkMesh.RenderType.OPAQUE, ChunkVertexFlag.NORMAL);
+                labelledPart.appendTo(chunkMesh, view, x, y, z, ChunkMesh.RenderType.OPAQUE, Color.white, ChunkVertexFlag.NORMAL);
             }
         }
     }
