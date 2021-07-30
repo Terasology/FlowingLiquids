@@ -23,6 +23,8 @@ import org.terasology.engine.world.block.BlockPart;
 import org.terasology.engine.world.block.shapes.BlockMeshPart;
 import org.terasology.engine.world.block.tiles.WorldAtlas;
 import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.nui.Color;
+import org.terasology.nui.Colorc;
 
 /**
  * As the default block mesh generator does not allow the mesh to depend on
@@ -53,6 +55,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
         }
 
         ChunkMesh.RenderType renderType = ChunkMesh.RenderType.TRANSLUCENT;
+        Color colorCache = new Color();
 
         if (!block.isTranslucent()) {
             renderType = ChunkMesh.RenderType.OPAQUE;
@@ -72,10 +75,16 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             Block adjacentBlock = view.getBlock(adjacentPos);
             boolean adjacentSuppressed = view.getBlock(adjacentPos.x, adjacentPos.y + 1, adjacentPos.z) == block;
             if (isSideVisibleForBlockTypes(adjacentBlock, adjacentSuppressed, block, full, suppressed, side)) {
-//                Vector4f colorOffset = block.calcColorOffsetFor(BlockPart.fromSide(side), biome);
                 BlockMeshPart basePart = appearance.getPart(BlockPart.fromSide(side));
                 BlockMeshPart loweredPart = lowerPart(side, basePart, renderHeight, suppressed, adjacentBlock == block);
-                loweredPart.appendTo(chunkMesh, view, x, y, z, renderType, vertexFlag);
+
+                Colorc colorOffset = block.getColorOffset(BlockPart.fromSide(side));
+                Colorc colorSource = block.getColorSource(BlockPart.fromSide(side)).calcColor(x, y, z);
+                colorCache.setRed(colorSource.rf() * colorOffset.rf())
+                    .setGreen(colorSource.gf() * colorOffset.gf())
+                    .setBlue(colorSource.bf() * colorOffset.bf())
+                    .setAlpha(colorSource.af() * colorOffset.af());
+                loweredPart.appendTo(chunkMesh, view, x, y, z, renderType, colorCache, vertexFlag);
             }
         }
     }
