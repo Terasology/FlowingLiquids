@@ -28,7 +28,7 @@ public class LiquidSmooshingReactionComponent implements Component<LiquidSmooshi
     public boolean reversible;
 
     @Override
-    public void copy(LiquidSmooshingReactionComponent other) {
+    public void copyFrom(LiquidSmooshingReactionComponent other) {
         this.liquid = other.liquid;
         this.block = other.block;
         this.product = other.product;
