@@ -1,4 +1,4 @@
-// Copyright 2020 The Terasology Foundation
+// Copyright 2021 The Terasology Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 package org.terasology.flowingliquids.rendering.primitives;
@@ -9,7 +9,6 @@ import org.joml.Vector3i;
 import org.joml.Vector3ic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.terasology.gestalt.assets.ResourceUrn;
 import org.terasology.engine.math.Side;
 import org.terasology.engine.rendering.assets.mesh.Mesh;
 import org.terasology.engine.rendering.primitives.BlockMeshGenerator;
@@ -23,6 +22,7 @@ import org.terasology.engine.world.block.BlockPart;
 import org.terasology.engine.world.block.shapes.BlockMeshPart;
 import org.terasology.engine.world.block.tiles.WorldAtlas;
 import org.terasology.flowingliquids.world.block.LiquidData;
+import org.terasology.gestalt.assets.ResourceUrn;
 import org.terasology.nui.Color;
 import org.terasology.nui.Colorc;
 
@@ -79,7 +79,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
                 BlockMeshPart loweredPart = lowerPart(side, basePart, renderHeight, suppressed, adjacentBlock == block);
 
                 Colorc colorOffset = block.getColorOffset(BlockPart.fromSide(side));
-                Colorc colorSource = block.getColorSource(BlockPart.fromSide(side)).calcColor(x, y, z);
+                Colorc colorSource = block.getColorSource(BlockPart.fromSide(side)).calcColor(view, x, y, z);
                 colorCache.setRed(colorSource.rf() * colorOffset.rf())
                     .setGreen(colorSource.gf() * colorOffset.gf())
                     .setBlue(colorSource.bf() * colorOffset.bf())
