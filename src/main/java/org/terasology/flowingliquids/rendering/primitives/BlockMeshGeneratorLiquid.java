@@ -10,11 +10,9 @@ import org.joml.Vector3ic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.terasology.engine.math.Side;
-import org.terasology.engine.rendering.assets.mesh.Mesh;
-import org.terasology.engine.rendering.primitives.BlockMeshGenerator;
+import org.terasology.engine.rendering.primitives.BlockMeshShapeGenerator;
 import org.terasology.engine.rendering.primitives.ChunkMesh;
 import org.terasology.engine.rendering.primitives.ChunkVertexFlag;
-import org.terasology.engine.rendering.primitives.Tessellator;
 import org.terasology.engine.world.ChunkView;
 import org.terasology.engine.world.block.Block;
 import org.terasology.engine.world.block.BlockAppearance;
@@ -30,20 +28,28 @@ import org.terasology.nui.Colorc;
  * As the default block mesh generator does not allow the mesh to depend on
  * the liquid value, this modified version must be used for liquids.
  */
-public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
+public class BlockMeshGeneratorLiquid extends BlockMeshShapeGenerator {
     private static final Logger logger = LoggerFactory.getLogger(BlockMeshGeneratorLiquid.class);
 
-    private WorldAtlas worldAtlas;
-
-    private Block block;
-    private Mesh mesh;
-
+    private final ResourceUrn baseUrn = new ResourceUrn("FlowingLiquids", "blockmesh");
+    private final WorldAtlas worldAtlas;
+    private final Block block;
     private int flowIx;
 
     public BlockMeshGeneratorLiquid(Block block, WorldAtlas worldAtlas, int flowIx) {
         this.block = block;
         this.worldAtlas = worldAtlas;
         this.flowIx = flowIx;
+    }
+
+    @Override
+    public Block getBlock() {
+        return block;
+    }
+
+    @Override
+    public ResourceUrn baseUrn() {
+        return baseUrn;
     }
 
     @Override
@@ -167,26 +173,4 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
         }
     }
 
-    @Override
-    public Mesh getStandaloneMesh() {
-        if (mesh == null || mesh.isDisposed()) {
-            generateMesh();
-        }
-        return mesh;
-    }
-
-    private void generateMesh() {
-        Tessellator tessellator = new Tessellator();
-        for (BlockPart dir : BlockPart.values()) {
-            BlockMeshPart part = block.getPrimaryAppearance().getPart(dir);
-            if (part != null) {
-                if (block.isDoubleSided()) {
-                    tessellator.addMeshPartDoubleSided(part);
-                } else {
-                    tessellator.addMeshPart(part);
-                }
-            }
-        }
-        mesh = tessellator.generateMesh(new ResourceUrn("engine", "blockmesh", block.getURI().toString()));
-    }
 }
