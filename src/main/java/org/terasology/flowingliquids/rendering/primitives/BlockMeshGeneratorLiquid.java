@@ -7,14 +7,10 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.joml.Vector3ic;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.terasology.engine.math.Side;
-import org.terasology.engine.rendering.assets.mesh.Mesh;
-import org.terasology.engine.rendering.primitives.BlockMeshGenerator;
+import org.terasology.engine.rendering.primitives.BlockMeshShapeGenerator;
 import org.terasology.engine.rendering.primitives.ChunkMesh;
 import org.terasology.engine.rendering.primitives.ChunkVertexFlag;
-import org.terasology.engine.rendering.primitives.Tessellator;
 import org.terasology.engine.world.ChunkView;
 import org.terasology.engine.world.block.Block;
 import org.terasology.engine.world.block.BlockAppearance;
@@ -30,14 +26,11 @@ import org.terasology.nui.Colorc;
  * As the default block mesh generator does not allow the mesh to depend on
  * the liquid value, this modified version must be used for liquids.
  */
-public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
-    private static final Logger logger = LoggerFactory.getLogger(BlockMeshGeneratorLiquid.class);
+public class BlockMeshGeneratorLiquid extends BlockMeshShapeGenerator {
+    private static final ResourceUrn baseUrn = new ResourceUrn("engine", "blockmesh");
 
     private WorldAtlas worldAtlas;
-
     private Block block;
-    private Mesh mesh;
-
     private int flowIx;
 
     public BlockMeshGeneratorLiquid(Block block, WorldAtlas worldAtlas, int flowIx) {
@@ -70,7 +63,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
         boolean full = suppressed || isFull(renderHeight);
 
         BlockAppearance appearance = block.getAppearance(null); //TODO: collect information the block wants, or avoid this entirely.
-        for (Side side : Side.values()) {
+        for (Side side : Side.allSides()) {
             Vector3i adjacentPos = side.getAdjacentPos(pos, new Vector3i());
             Block adjacentBlock = view.getBlock(adjacentPos);
             boolean adjacentSuppressed = view.getBlock(adjacentPos.x, adjacentPos.y + 1, adjacentPos.z) == block;
@@ -81,9 +74,9 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
                 Colorc colorOffset = block.getColorOffset(BlockPart.fromSide(side));
                 Colorc colorSource = block.getColorSource(BlockPart.fromSide(side)).calcColor(view, x, y, z);
                 colorCache.setRed(colorSource.rf() * colorOffset.rf())
-                    .setGreen(colorSource.gf() * colorOffset.gf())
-                    .setBlue(colorSource.bf() * colorOffset.bf())
-                    .setAlpha(colorSource.af() * colorOffset.af());
+                        .setGreen(colorSource.gf() * colorOffset.gf())
+                        .setBlue(colorSource.bf() * colorOffset.bf())
+                        .setAlpha(colorSource.af() * colorOffset.af());
                 loweredPart.appendTo(chunkMesh, view, x, y, z, renderType, colorCache, vertexFlag);
             }
         }
@@ -127,8 +120,8 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
         Vector2f[] texCoords = new Vector2f[basePart.size()];
         int[] indices = new int[basePart.indicesSize()];
         for (int i = 0; i < basePart.size(); i++) {
-            vertices[i]  = new Vector3f(basePart.getVertex(i));
-            normals[i]   = new Vector3f(basePart.getNormal(i));
+            vertices[i] = new Vector3f(basePart.getVertex(i));
+            normals[i] = new Vector3f(basePart.getNormal(i));
             texCoords[i] = new Vector2f(basePart.getTexCoord(i));
         }
         for (int i = 0; i < basePart.indicesSize(); i++) {
@@ -149,7 +142,7 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             }
         }
         return new BlockMeshPart(
-            vertices, normals, texCoords, indices);
+                vertices, normals, texCoords, indices);
     }
 
     private boolean isSideVisibleForBlockTypes(Block blockToCheck, boolean adjacentSuppressed, Block currentBlock, boolean full, boolean suppressed, Side side) {
@@ -161,32 +154,19 @@ public class BlockMeshGeneratorLiquid implements BlockMeshGenerator {
             return false;
         } else {
             return currentBlock.isWaving() != blockToCheck.isWaving()
-                || blockToCheck.getMeshGenerator() == null
-                || !blockToCheck.isFullSide(side.reverse())
-                || (!currentBlock.isTranslucent() && blockToCheck.isTranslucent());
+                    || blockToCheck.getMeshGenerator() == null
+                    || !blockToCheck.isFullSide(side.reverse())
+                    || (!currentBlock.isTranslucent() && blockToCheck.isTranslucent());
         }
     }
 
     @Override
-    public Mesh getStandaloneMesh() {
-        if (mesh == null || mesh.isDisposed()) {
-            generateMesh();
-        }
-        return mesh;
+    public Block getBlock() {
+        return block;
     }
 
-    private void generateMesh() {
-        Tessellator tessellator = new Tessellator();
-        for (BlockPart dir : BlockPart.values()) {
-            BlockMeshPart part = block.getPrimaryAppearance().getPart(dir);
-            if (part != null) {
-                if (block.isDoubleSided()) {
-                    tessellator.addMeshPartDoubleSided(part);
-                } else {
-                    tessellator.addMeshPart(part);
-                }
-            }
-        }
-        mesh = tessellator.generateMesh(new ResourceUrn("engine", "blockmesh", block.getURI().toString()));
+    @Override
+    public ResourceUrn getBaseUrn() {
+        return baseUrn;
     }
 }
